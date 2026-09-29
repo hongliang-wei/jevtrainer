@@ -45,7 +45,13 @@ def run_benchmarks(b, names: list[str], out_dir: str | Path | None = None, max_s
         recs = benchmark_records(name, max_samples)
         outs = collect(b, recs, batch_size)
         res = summarize(outs, b.temperature, spec.metric)
-        res["skipped_records"] = len(recs) - len({o["id"] for o in outs})
+        expected = sum(1 for r in recs for t in r.targets.values() if t.label is not None)
+        res["skipped_decisions"] = expected - res.get("n", 0) if expected else 0
+        if expected and res.get("n"):
+            # skipped decisions (too long / too many options) count as wrong
+            res["coverage"] = res["n"] / expected
+            if spec.metric == "accuracy":
+                res["score"] = res["accuracy"] * res["coverage"]
         results[name] = res
         print(json.dumps({"benchmark": name, **{k: round(v, 4) if isinstance(v, float) else v for k, v in res.items()}}))
     if out_dir:

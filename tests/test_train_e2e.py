@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from conftest import DEVICE
 
 from jevtrainer.config import TrainConfig
 from jevtrainer.eval.runner import collect
@@ -28,6 +29,6 @@ def test_train_save_load(tiny_vl, record, tmp_path, readout, finetune):
     assert (out / "readout.json").exists() and (out / "calibration.json").exists()
     losses = [json.loads(l)["loss"] for l in (out / "train_log.jsonl").read_text().splitlines()]
     assert len(losses) == 4
-    b = load(out, "fp32")
+    b = load(out, "fp32", DEVICE)
     outs = collect(b, recs[:3])
     assert len(outs) == 9 and b.temperature["default"] > 0

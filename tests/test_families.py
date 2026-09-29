@@ -2,10 +2,16 @@
 
 import pytest
 import torch
+from conftest import DEVICE, on_device
 
 from jevtrainer.model.families import resolve_family
 from jevtrainer.model.load import build, prepare_finetune
-from jevtrainer.train.batching import Collator, DecisionModel
+from jevtrainer.train.batching import Collator, DecisionModel, to_device
+
+
+def _logits(b, record):
+    on_device(b)
+    return DecisionModel(b.model, b.readout)(to_device(Collator(b.readout, 4096)([record]), DEVICE))
 
 
 def test_qwen35_introspection(tiny_vl):
@@ -43,8 +49,7 @@ def test_llama_generic_path(tmp_path, record):
     for readout in ("marker", "slot", "pointer"):
         b = build(path, readout, dtype="fp32")
         prepare_finetune(b, "lora", {"r": 4}, grad_ckpt=False)
-        z = DecisionModel(b.model, b.readout)(Collator(b.readout, 4096)([record]))
-        assert [x.numel() for x in z] == [3, 2, 3]
+        assert [x.numel() for x in _logits(b, record)] == [3, 2, 3]
 
 
 def test_encoder_family(tmp_path, record):
@@ -57,7 +62,6 @@ def test_encoder_family(tmp_path, record):
     for readout in ("slot", "pointer"):
         b = build(path, readout, dtype="fp32")
         prepare_finetune(b, "full", {}, grad_ckpt=False)
-        z = DecisionModel(b.model, b.readout)(Collator(b.readout, 4096)([record]))
-        assert [x.numel() for x in z] == [3, 2, 3]
+        assert [x.numel() for x in _logits(b, record)] == [3, 2, 3]
     with pytest.raises(ValueError, match="LM head"):
         build(path, "marker", dtype="fp32")

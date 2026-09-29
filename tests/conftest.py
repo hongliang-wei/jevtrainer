@@ -9,6 +9,14 @@ import pytest
 import torch
 
 REAL = os.environ.get("JT_TEST_TOKENIZER", "Qwen/Qwen3.5-0.8B")
+# flash-linear-attention kernels are GPU-only; transformers uses them whenever fla is installed.
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def on_device(b):
+    b.model.to(DEVICE)
+    b.readout.to(DEVICE)
+    return b
 
 
 def _tiny_qwen35(path):

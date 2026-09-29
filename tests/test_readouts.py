@@ -1,21 +1,28 @@
 import pytest
 import torch
+from conftest import DEVICE, on_device
 
 from jevtrainer.model.load import build, prepare_finetune, trainable_parameters
 from jevtrainer.predict import answer, probs
-from jevtrainer.train.batching import Collator, DecisionModel
+from jevtrainer.train.batching import Collator, DecisionModel, to_device
 from jevtrainer.train.calibrate import fit_temperature
 
 READOUTS = ["marker", "slot", "pointer"]
+
+
+def run(b, records, grad=True):
+    batch = Collator(b.readout, 4096)(records)
+    with torch.set_grad_enabled(grad):
+        return DecisionModel(b.model, b.readout)(to_device(batch, DEVICE)), batch
 
 
 @pytest.mark.parametrize("readout", READOUTS)
 def test_forward_backward_lora(tiny_vl, record, readout):
     b = build(tiny_vl, readout, dtype="fp32")
     prepare_finetune(b, "lora", {"r": 4}, grad_ckpt=False)
-    batch = Collator(b.readout, 4096)([record, record])
+    on_device(b)
+    logits, batch = run(b, [record, record])
     assert len(batch["reads"]) == 6
-    logits = DecisionModel(b.model, b.readout)(batch)
     assert [z.numel() for z in logits] == [3, 2, 3] * 2
     loss = sum(-torch.log_softmax(z, -1)[t["index"]] for z, t in zip(logits, batch["targets"]))
     loss.backward()
@@ -52,12 +59,10 @@ def test_pointer_rows_per_question(tiny_vl, record):
 
 @pytest.mark.parametrize("readout", READOUTS)
 def test_image_record(tiny_vl, image_record, readout):
-    b = build(tiny_vl, readout, dtype="fp32")
+    b = on_device(build(tiny_vl, readout, dtype="fp32"))
     b.model.eval()
-    batch = Collator(b.readout, 4096)([image_record])
+    z, batch = run(b, [image_record], grad=False)
     assert batch["pixel_values"] is not None
-    with torch.no_grad():
-        z = DecisionModel(b.model, b.readout)(batch)
     assert z[0].numel() == 3 and torch.isfinite(z[0]).all()
 
 
@@ -65,7 +70,7 @@ def test_text_only_model(tiny_text, record):
     for readout in READOUTS:
         b = build(tiny_text, readout, dtype="fp32")
         prepare_finetune(b, "full", {}, grad_ckpt=False)
-        z = DecisionModel(b.model, b.readout)(Collator(b.readout, 4096)([record]))
+        z, _ = run(on_device(b), [record])
         assert [x.numel() for x in z] == [3, 2, 3]
         assert len(trainable_parameters(b)) > 10
 
@@ -79,5 +84,5 @@ def test_predict_and_calibrate(record):
     n = answer(record.questions["urgent"], torch.tensor([0.25, 0.75]))
     assert n["noul"] == 0.75
     over = [torch.tensor([6.0, 0.0])] * 50 + [torch.tensor([0.0, 6.0])] * 50
-    t = fit_temperature(over, [2] * 100, [0] * 70 + [1] * 30 + [0] * 0)
+    t = fit_temperature(over, [2] * 100, [0] * 70 + [1] * 30)
     assert t > 1.5

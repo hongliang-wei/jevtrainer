@@ -33,7 +33,8 @@ class Collator:
             records = augment(records, self.aug, self.rng)
         rows, used = [], []
         for r in records:
-            r = fit_options(r, self.readout.max_options, self.rng)
+            if self.aug is not None:  # never change an evaluation task; unfit records are skipped instead
+                r = fit_options(r, self.readout.max_options, self.rng)
             try:
                 rr = self.readout.encode(r, self.rng if self.aug is not None else None)
             except ValueError:
