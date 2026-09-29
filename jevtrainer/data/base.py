@@ -53,7 +53,7 @@ def load(name: str, split: str = "train", max_samples: int | None = None, seed: 
         path = cache_dir() / "records" / name / f"{split}-cap{cap}-v{spec.version}.jsonl"
         if not path.exists():
             rng = random.Random(f"{name}:{split}")
-            tmp = path.with_suffix(".tmp")
+            tmp = path.with_suffix(f".{os.getpid()}.tmp")
             n = write_jsonl((r.validate() for r in spec.build(split, cap, rng)), tmp)
             if n == 0:
                 raise ValueError(f"dataset '{name}' split '{split}' produced no records")
