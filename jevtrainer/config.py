@@ -94,6 +94,7 @@ class TrainConfig(Strict):
     max_grad_norm: float = 1.0
     dtype: Literal["bf16", "fp16", "fp32"] = "bf16"
     grad_ckpt: bool = True
+    group_by_length: bool = True
     num_workers: int = 2
     seed: int = 42
     # after training

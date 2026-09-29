@@ -1,0 +1,53 @@
+# Reproduce Intern-Decision-0.8B with open data: marker readout, full fine-tuning of Qwen3.5-0.8B,
+# full-vocabulary cross-entropy at the placeholder positions (Intern's recipe), 2 epochs.
+# Evaluated on Intern's own accuracy-v1 bundle; its test states are removed from training.
+model: Qwen/Qwen3.5-0.8B
+readout: marker
+readout_options:
+  full_vocab_loss: true
+finetune: full
+output_dir: runs/repro/intern_0.8b_v1
+
+dataset:
+  # same decision types as the test suites (different rows)
+  - {name: typed_decisions, max_samples: 20000}
+  - {name: agnews, max_samples: 20000}
+  - {name: toolace, max_samples: 10000}
+  - {name: glaive_tools, max_samples: 8000}
+  - {name: jailbreak_classification}
+  - {name: toxic_chat}
+  # breadth: intent, NLI, reading, knowledge, commonsense, sentiment, agents
+  - {name: banking77}
+  - {name: clinc150, max_samples: 8000}
+  - {name: boolq}
+  - {name: mnli, max_samples: 10000}
+  - {name: anli, max_samples: 10000}
+  - {name: arc}
+  - {name: openbookqa}
+  - {name: csqa}
+  - {name: mmlu_aux, max_samples: 10000}
+  - {name: hellaswag, max_samples: 8000}
+  - {name: winogrande, max_samples: 8000}
+  - {name: sst5}
+  - {name: yelp, max_samples: 6000}
+  - {name: gsm8k_mc}
+  - {name: sms_spam}
+  - {name: mind2web, max_samples: 8000}
+
+augment:
+  p_none: 0.05
+  p_distract: 0.1
+  p_pack: 0.15      # merge short single-question records into multi-question states
+  pack_max: 4
+
+epochs: 2
+lr: 5.0e-6
+weight_decay: 0.01
+warmup_ratio: 0.03
+batch_size: 16
+grad_accum: 4
+max_state_tokens: 3072
+max_length: 6144
+holdout: 0.02
+eval_dataset: intern-accuracy-v1
+save_steps: 1000

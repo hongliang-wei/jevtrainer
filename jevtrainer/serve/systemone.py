@@ -41,7 +41,9 @@ def make_app(cfg):
         for o in outs:
             q = rec.questions[o["name"]]
             answers[o["name"]] = answer(q, probs(o["logits"], o["k"], temperature_for(b.temperature, q.type)))
-        return {"model": req.get("model", cfg.model_name), "answers": answers, "latency_ms": round(1000 * (time.time() - t0), 1)}
+        rows = b.readout.encode(rec)
+        usage = {"input_tokens": sum(len(r.input_ids) for r in rows), "output_tokens": 0}
+        return {"model": req.get("model") or cfg.model_name, "usage": usage, "answers": answers, "latency_ms": round(1000 * (time.time() - t0), 1)}
 
     return app
 

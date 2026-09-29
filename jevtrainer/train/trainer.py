@@ -21,7 +21,7 @@ from jevtrainer.data.mixture import Source, build_mixture, split_holdout
 from jevtrainer.model.load import Bundle, build, count, prepare_finetune, save, trainable_parameters
 from jevtrainer.registry import LOSSES, TRAINERS
 from jevtrainer.train import losses as L
-from jevtrainer.train.batching import Collator, DecisionModel, to_device
+from jevtrainer.train.batching import Collator, DecisionModel, LengthGroupedBatches, to_device
 from jevtrainer.train.calibrate import fit
 
 
@@ -121,7 +121,10 @@ class Trainer:
         )
         workers = c.num_workers if os.name != "nt" else 0
         collate = Collator(b.readout, c.max_length, c.augment.to_config(), c.seed)
-        loader = DataLoader(train, batch_size=c.batch_size, shuffle=True, collate_fn=collate, num_workers=workers, drop_last=True)
+        if c.group_by_length:
+            loader = DataLoader(train, batch_sampler=LengthGroupedBatches(train, c.batch_size, c.seed), collate_fn=collate, num_workers=workers)
+        else:
+            loader = DataLoader(train, batch_size=c.batch_size, shuffle=True, collate_fn=collate, num_workers=workers, drop_last=True)
         net, opt, sched = acc.prepare(net, opt, sched)
         if c.report_to != "none":
             acc.init_trackers("jevtrainer", config=c.model_dump())

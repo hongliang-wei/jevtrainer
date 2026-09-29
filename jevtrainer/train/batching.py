@@ -70,5 +70,27 @@ def _target(r: Record, name: str) -> dict:
     }
 
 
+class LengthGroupedBatches:
+    """Shuffled batches of records with similar length (less padding). Re-shuffles every epoch."""
+
+    def __init__(self, records: list[Record], batch_size: int, seed: int = 0, mega: int = 64):
+        self.lengths = [len(r.state_text()) + sum(len(q.instructions) + sum(map(len, q.descriptions())) for q in r.questions.values()) for r in records]
+        self.batch_size, self.mega, self.rng = batch_size, mega, random.Random(seed)
+
+    def __iter__(self):
+        idx = list(range(len(self.lengths)))
+        self.rng.shuffle(idx)
+        size = self.batch_size * self.mega
+        batches = []
+        for i in range(0, len(idx), size):
+            chunk = sorted(idx[i : i + size], key=self.lengths.__getitem__)
+            batches += [chunk[j : j + self.batch_size] for j in range(0, len(chunk) - self.batch_size + 1, self.batch_size)]
+        self.rng.shuffle(batches)
+        return iter(batches)
+
+    def __len__(self):
+        return len(self.lengths) // self.batch_size
+
+
 def to_device(batch: dict, device) -> dict:
     return {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}

@@ -40,7 +40,7 @@ class Question:
         if self.type == "score":
             return [str(v) for v in self.criteria]
         crit = self.criteria or {}
-        return [str(crit.get("false", "no")), str(crit.get("true", "yes"))]
+        return [str(crit.get("false") or "no"), str(crit.get("true") or "yes")]
 
     def options(self) -> list[tuple[str, str]]:
         return list(zip(self.labels(), self.descriptions()))
@@ -92,7 +92,7 @@ class Record:
 
     @classmethod
     def from_dict(cls, d: dict) -> "Record":
-        questions = {k: Question(q["type"], q.get("instructions", ""), q.get("criteria")) for k, q in d["questions"].items()}
+        questions = {k: Question(q["type"], q.get("instructions") or "", q.get("criteria")) for k, q in d["questions"].items()}
         targets = {}
         for k, t in (d.get("targets") or {}).items():
             q = questions[k]

@@ -31,5 +31,6 @@ def answer(q: Question, p: torch.Tensor) -> dict:
         return {"type": "noul", "noul": dist["yes"], "probabilities": dist}
     if q.type == "score":
         levels = torch.arange(len(labels), dtype=p.dtype, device=p.device)
-        return {"type": "score", "score": float((levels * p).sum()), "probabilities": dist, "confidence": confidence(p)}
+        legend = dict(zip(labels, q.descriptions()))
+        return {"type": "score", "score": float((levels * p).sum()), "probabilities": dist, "confidence": confidence(p), "legend": legend}
     return {"type": "choice", "choice": labels[int(p.argmax())], "probabilities": dist, "confidence": confidence(p)}
