@@ -6,6 +6,7 @@ import hashlib
 import random
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 from jevtrainer.data.base import DatasetSpec, load
 from jevtrainer.registry import DATASETS
@@ -24,8 +25,18 @@ def _norm(text: str) -> str:
     return hashlib.sha1(re.sub(r"\W+", " ", text.lower()).strip().encode()).hexdigest()
 
 
+def _image_digest(ref: str) -> str:
+    try:
+        return hashlib.sha1(Path(ref).read_bytes()).hexdigest()
+    except OSError:
+        return ref
+
+
 def state_keys(r: Record) -> set[str]:
-    """The whole state plus every long text field, so a test request inside a new tool catalog still matches."""
+    """The whole state plus every long text field, so a test request inside a new tool catalog still matches.
+    With images, the same text over a different picture is a different item."""
+    if r.images:
+        return {_norm(r.state_text() + "|" + "|".join(_image_digest(i) for i in r.images))}
     keys = {_norm(r.state_text())}
     if isinstance(r.state, dict):
         for v in r.state.values():
