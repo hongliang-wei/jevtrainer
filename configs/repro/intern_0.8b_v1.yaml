@@ -10,7 +10,7 @@ output_dir: runs/repro/intern_0.8b_v1
 
 dataset:
   # same decision types as the test suites (different rows)
-  - {name: typed_decisions, max_samples: 20000}
+  - {name: typed_decisions, weight: 3}     # 1,200 states x 5 questions, teacher probabilities
   - {name: agnews, max_samples: 20000}
   - {name: toolace, max_samples: 10000}
   - {name: glaive_tools, max_samples: 8000}
