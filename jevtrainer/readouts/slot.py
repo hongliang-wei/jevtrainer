@@ -13,7 +13,7 @@ import random
 import torch
 from torch import nn
 
-from jevtrainer.readouts.base import Read, Readout, record_images
+from jevtrainer.readouts.base import NEUTRAL_KEY, Read, Readout, record_images
 from jevtrainer.registry import READOUTS
 from jevtrainer.schema import Record
 
@@ -50,7 +50,7 @@ class SlotReadout(Readout):
             slots = self.order(record, name, len(opts), rng)
             presented = sorted(range(len(opts)), key=lambda i: slots[i])
             criteria = [
-                {"t": f"<|decision_{slots[i]:03d}|>", "n": self.clean(opts[i][0]), "d": self.clean(opts[i][1])}
+                {"t": f"<|decision_{slots[i]:03d}|>", "n": "" if NEUTRAL_KEY.fullmatch(opts[i][0]) else self.clean(opts[i][0]), "d": self.clean(opts[i][1])}
                 for i in presented
             ]
             question = {"type": q.type, "instructions": self.clean(q.instructions), "criteria": criteria}

@@ -13,6 +13,7 @@ readout, which is trainable under LoRA and full fine-tuning alike.
 from __future__ import annotations
 
 import io
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -191,8 +192,12 @@ def record_images(record: Record) -> list:
     return [load_image(ref, root) for ref in record.images]
 
 
+NEUTRAL_KEY = re.compile(r"(opt|option|element|choice)_\d+")
+
+
 def option_text(label: str, desc: str, qtype: str) -> str:
-    if qtype == "score":
+    """What the model reads for one option. Neutral keys (opt_3) carry no meaning, so only the text is shown."""
+    if qtype == "score" or (desc and NEUTRAL_KEY.fullmatch(label)):
         return desc
     if not desc or desc == label:
         return label
