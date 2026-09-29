@@ -63,13 +63,17 @@ def run_benchmarks(b, names: list[str], out_dir: str | Path | None = None, max_s
 
 
 def to_markdown(results: dict) -> str:
-    lines = ["| benchmark | n | score | accuracy | skill | ECE | Brier |", "|---|---:|---:|---:|---:|---:|---:|"]
+    def f(v, scale=1.0, digits=2):
+        return "" if v is None else f"{scale * v:.{digits}f}"
+
+    lines = ["| benchmark | n | score | accuracy | skill | ECE | Brier | TVD |", "|---|---:|---:|---:|---:|---:|---:|---:|"]
     for name, r in results.items():
         if not r.get("n"):
-            lines.append(f"| {name} | 0 | | | | | |")
+            lines.append(f"| {name} | 0 | | | | | | |")
             continue
         lines.append(
-            f"| {name} | {r['n']} | {100 * r['score']:.2f} | {100 * r['accuracy']:.2f} | {100 * r['skill']:.2f} | {r['ece']:.4f} | {r['brier']:.4f} |"
+            f"| {name} | {r['n']} | {f(r['score'], 100)} | {f(r.get('accuracy'), 100)} | {f(r.get('skill'), 100)} "
+            f"| {f(r.get('ece', r.get('expected_ece')), 1, 4)} | {f(r.get('brier', r.get('expected_brier')), 1, 4)} | {f(r.get('tvd'), 1, 4)} |"
         )
     scored = [r["score"] for r in results.values() if r.get("n")]
     if scored:
