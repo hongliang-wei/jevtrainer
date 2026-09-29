@@ -100,12 +100,24 @@ def data_show(name: str, split: str = "train", n: int = 2):
 
 
 @data_app.command("prepare")
-def data_prepare(names: str, split: str = "train", cap: int = 100_000):
-    """Download and convert datasets into the cache."""
-    from jevtrainer.data.base import load
+def data_prepare(names: str = typer.Argument("all", help="comma list of name or name:split; 'all' = every split of every dataset"),
+                 cap: int = 100_000):
+    """Download and convert datasets into the cache; failures are reported and skipped."""
+    import traceback
 
-    for name in [n.strip() for n in names.split(",") if n.strip()]:
-        typer.echo(f"{name}:{split} -> {len(load(name, split, cap=cap))} records")
+    from jevtrainer.data.base import load
+    from jevtrainer.registry import DATASETS
+
+    if names == "all":
+        items = [(n, sp) for n, s in DATASETS.items() for sp in s.splits]
+    else:
+        items = [(n.partition(":")[0], n.partition(":")[2] or "train") for n in names.split(",") if n.strip()]
+    for name, split in items:
+        try:
+            typer.echo(f"OK   {name}:{split} -> {len(load(name, split, cap=cap))} records")
+        except Exception as e:
+            typer.echo(f"FAIL {name}:{split} -> {type(e).__name__}: {str(e)[:300]}")
+            traceback.print_exc()
 
 
 @data_app.command("fetch")
