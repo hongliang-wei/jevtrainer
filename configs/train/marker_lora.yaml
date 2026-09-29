@@ -1,0 +1,11 @@
+model: Qwen/Qwen3.5-0.8B
+readout: marker
+dataset: banking77,boolq,agnews
+output_dir: runs/marker-lora-0.8b
+finetune: lora
+lr: 1e-4
+max_samples: 3000
+epochs: 1
+batch_size: 8
+eval_dataset: banking77,boolq
+eval_max_samples: 500

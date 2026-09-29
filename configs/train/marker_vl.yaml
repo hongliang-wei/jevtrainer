@@ -1,0 +1,12 @@
+# Multimodal: records with `images` go through the model's processor; the vision tower stays frozen.
+model: Qwen/Qwen3.5-0.8B
+readout: marker
+dataset: scienceqa_img
+output_dir: runs/marker-vl-0.8b
+finetune: lora
+max_samples: 3000
+max_steps: 200
+batch_size: 4
+grad_accum: 2
+eval_dataset: scienceqa_img
+eval_max_samples: 300

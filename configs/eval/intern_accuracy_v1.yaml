@@ -1,0 +1,4 @@
+# jt eval configs/eval/intern_accuracy_v1.yaml --set checkpoint=runs/xxx
+# or zero-shot: --set model=Qwen/Qwen3.5-0.8B --set readout=marker
+benchmarks: intern-accuracy-v1
+batch_size: 16

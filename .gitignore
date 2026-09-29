@@ -1,0 +1,12 @@
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+runs/
+outputs/
+cache/
+*.safetensors
+*.bin
+*.pt
+*.gguf
+wandb/

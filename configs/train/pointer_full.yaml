@@ -1,0 +1,11 @@
+model: Qwen/Qwen3.5-0.8B
+readout: pointer
+dataset: banking77,boolq,agnews
+output_dir: runs/pointer-full-0.8b
+finetune: full
+lr: 1e-5
+max_samples: 3000
+max_steps: 100
+batch_size: 8
+eval_dataset: banking77,boolq
+eval_max_samples: 500

@@ -1,0 +1,14 @@
+# jt train this.yaml     (every field below except the first three is optional)
+model: {model}
+readout: {readout}          # marker | slot | pointer
+dataset: {dataset}           # registry names or ./my.jsonl; "name:split" picks a split
+
+output_dir: runs/{readout}-{finetune}
+finetune: {finetune}          # lora | full
+lora:
+  r: 16
+epochs: 1
+batch_size: 8
+grad_accum: 2
+max_samples: 5000            # per dataset
+eval_dataset: intern-accuracy-v1
