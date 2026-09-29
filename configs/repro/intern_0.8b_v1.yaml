@@ -1,4 +1,4 @@
-# Reproduce Intern-Decision-0.8B with open data: marker readout, full fine-tuning of Qwen3.5-0.8B,
+﻿# Reproduce Intern-Decision-0.8B with open data: marker readout, full fine-tuning of Qwen3.5-0.8B,
 # full-vocabulary cross-entropy at the placeholder positions (Intern's recipe), 2 epochs.
 # Evaluated on Intern's own accuracy-v1 bundle; its test states are removed from training.
 model: Qwen/Qwen3.5-0.8B
@@ -32,7 +32,6 @@ dataset:
   - {name: yelp, max_samples: 6000}
   - {name: gsm8k_mc}
   - {name: sms_spam}
-  - {name: mind2web, max_samples: 8000}
 
 augment:
   p_none: 0.05
