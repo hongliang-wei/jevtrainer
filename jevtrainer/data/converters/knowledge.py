@@ -89,12 +89,17 @@ def gsm8k_mc(split, cap, rng):
             g = float(gold)
         except ValueError:
             continue
+        gold = str(int(g)) if g.is_integer() else f"{g:g}"
         cands = {gold}
-        while len(cands) < 4:
+        for _ in range(100):
+            if len(cands) == 4:
+                break
             delta = rng.choice([1, 2, 3, 5, 10]) * rng.choice([-1, 1])
             v = g + delta if rng.random() < 0.6 else g * rng.choice([2, 0.5, 1.5])
-            if v >= 0:
+            if v >= 0 or g < 0:
                 cands.add(str(int(v)) if float(v).is_integer() else f"{v:g}")
+        if len(cands) < 4:
+            continue
         opts = sorted(cands, key=lambda x: float(x))
         rec = mcq_record(rid("gsm8k", split, i), {"problem": r["question"]}, "What is the final numeric answer?", opts, opts.index(gold), area="math")
         if rec:
