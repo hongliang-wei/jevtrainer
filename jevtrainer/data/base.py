@@ -111,6 +111,49 @@ def noul_record(id: str, state, instructions: str, yes: bool, true: str = "", fa
     return Record(id, state, {"decision": Question("noul", instructions, crit)}, {"decision": Target("yes" if yes else "no")}, meta=meta)
 
 
+def classification(
+    name: str, repo: str, config: str | None, state: Callable[[dict], object], label: Callable[[dict], str | None],
+    instructions: str, criteria: dict[str, str], split_map: dict[str, str] | None = None, revision: str | None = None,
+    area: str = "misc", keep: Callable[[dict], bool] | None = None,
+):
+    """Build function for 'one text -> one of fixed labels' datasets."""
+
+    def build(split, cap, rng):
+        ds = hf(repo, config, split=(split_map or {}).get(split, split), **({"revision": revision} if revision else {}))
+        if keep is not None:
+            ds = ds.filter(keep)
+        for i, r in enumerate(take(ds, cap, rng)):
+            y = label(r)
+            if y is None or y not in criteria:
+                continue
+            yield choice_record(rid(name, split, i), state(r), instructions, dict(criteria), y, area=area)
+
+    return build
+
+
+def multiple_choice(
+    name: str, repo: str, config: str | None, state: Callable[[dict], object], options: Callable[[dict], list[str]],
+    gold: Callable[[dict], int], instructions: str = "Which option correctly answers the question?",
+    split_map: dict[str, str] | None = None, revision: str | None = None, area: str = "knowledge",
+):
+    def build(split, cap, rng):
+        ds = hf(repo, config, split=(split_map or {}).get(split, split), **({"revision": revision} if revision else {}))
+        for i, r in enumerate(take(ds, cap, rng)):
+            try:
+                rec = mcq_record(rid(name, split, i), state(r), instructions, options(r), gold(r), area=area)
+            except (ValueError, KeyError, IndexError, TypeError):
+                continue
+            if rec:
+                yield rec
+
+    return build
+
+
+def label_names(repo: str, config: str | None, column: str, split: str = "train", revision: str | None = None) -> list[str]:
+    ds = hf(repo, config, split=split, **({"revision": revision} if revision else {}))
+    return ds.features[column].names
+
+
 def iter_limit(it: Iterable, cap: int) -> Iterator:
     for i, x in enumerate(it):
         if i >= cap:

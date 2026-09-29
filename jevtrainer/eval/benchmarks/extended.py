@@ -1,0 +1,30 @@
+"""Broader public benchmarks (Decision Index style). Suite "extended"."""
+
+from jevtrainer.eval.base import bench
+
+EXT = "extended"
+bench("bbh", "bbh", suite=EXT, area="knowledge", max_samples=3000)
+bench("musr", "musr", suite=EXT, area="knowledge")
+bench("cladder", "cladder", suite=EXT, area="knowledge", max_samples=2000)
+bench("cruxeval", "cruxeval", suite=EXT, area="knowledge")
+bench("truthfulqa", "truthfulqa", suite=EXT, area="knowledge")
+bench("pubmedqa", "pubmedqa", suite=EXT, area="knowledge")
+bench("medqa", "medqa", suite=EXT, area="knowledge")
+bench("sciq", "sciq", suite=EXT, area="knowledge")
+bench("race", "race", suite=EXT, area="language", max_samples=2000)
+bench("piqa", "piqa", suite=EXT, area="language")
+bench("qasc", "qasc", suite=EXT, area="knowledge")
+bench("logiqa", "logiqa", suite=EXT, area="knowledge")
+bench("contract_nli", "contract_nli", suite=EXT, area="language", metric="macro_f1")
+bench("case_hold", "case_hold", suite=EXT, area="language", max_samples=2000)
+bench("unfair_tos", "unfair_tos", suite=EXT, area="language")
+bench("ragtruth", "ragtruth", suite=EXT, area="language")
+bench("esci", "esci", suite=EXT, area="retrieval", metric="macro_f1", max_samples=3000)
+bench("when2call", "when2call", suite=EXT, area="tools")
+bench("this_that_complex", "this_that_complex", suite=EXT, area="tools")
+bench("this_that_spatial", "this_that_spatial", suite=EXT, area="games", max_samples=3000)
+bench("emotion", "emotion", suite=EXT, area="language", metric="macro_f1")
+bench("tweet_irony", "tweet_irony", suite=EXT, area="language")
+bench("liar2", "liar2", suite=EXT, area="language")
+bench("stsb", "stsb", suite=EXT, area="language")
+bench("helpsteer2", "helpsteer2", suite=EXT, area="arts")
