@@ -68,3 +68,73 @@ single images and 16-frame clips are unchanged, 32-frame clips go from 112 to 80
 Length-grouped batching now counts about 1,000 characters per image (at most 8 images) so image records are
 batched together. Worst-case batches (16 rows of 5.9k tokens, 165k vision patches) peak at 30 GiB,
 so batch 16 is kept.
+
+## Why Hard is low
+
+Per-item predictions for v1 (zero-shot, step-1000, step-2000, step-5000, final) were dumped with batch 2,
+with and without state truncation. Batch size moves 1-2 items against the suite numbers above
+(zero-shot 40.5 vs 39.6, step-2000 42.3 vs 41.4, final 36.9 vs 36.0).
+
+**What Hard is.** 111 single-decision rows from two authoring pipelines ("opus" 54, "sol" 57):
+choice 67 / noul 38 / score 6, 2-6 options, mean chance 33.6%. Families: long_policy 19, multi_hop 18,
+judge_hard 17, temporal_numeric 15, probability 10, trap 8, ambiguous 7, tradeoff 6, adversarial 6,
+routing_hard 5. Items are rule application over insurance / HR / billing documents, date and money
+arithmetic, "does this response satisfy every requirement", and states with planted misleading notes or
+prompt injections. States reach 3.7k tokens: 41 rows are over 1k tokens, 8 over 3,072. The public file
+has no `gold_probs` (Intern's evaluator expects 10 from private provenance), so Hard TVD cannot be computed here.
+
+**Findings.**
+
+* Hard is near chance for every checkpoint: accuracy 36-42 vs chance 33.6 (skill 0.04-0.13; Intern 52.25,
+  skill 0.28). With n = 111 the standard error is about 4.6 points. Zero-shot to final gains 19 items and
+  loses 23; step-2000 to final gains 6 and loses 12 (sign test p = 0.24). Fine-tuning reshuffles which
+  items are right rather than teaching the task; 37 items are wrong at every checkpoint
+  (long_policy 10, temporal_numeric 7, multi_hop 7).
+* Long, rule-heavy items get worse with training. Accuracy on 1k-3k-token states: zero-shot 42,
+  step-2000 39, final 27 (n = 33); "opus" items (long policy documents): 31 / 39 / 26, below their 32% chance;
+  long_policy 32 -> 21, multi_hop 39 -> 22. Every v1 source has median state length <= 341 tokens and
+  essentially no state over 1k tokens (400-row samples per source), so long-document reading is never trained.
+* Truncation is not the cause: raising `max_state_tokens` to 16k changes 0-3 items per checkpoint.
+* Fine-tuning adds answer biases. noul: gold "yes" 17/38; predicted "yes" zero-shot 16, step-2000 32, final 28.
+  The most confident errors of final are "yes" on items whose answer is "no" (judge_hard, trap, eligibility
+  checks; conf 0.82-0.96), i.e. the surface-plausible answer. The training noul prior is not yes-heavy
+  (typed_decisions 49%, boolq 59%, yelp 38%, sms_spam 16% yes), so this is learned surface matching, not a
+  label prior. Choice/score rows with >= 3 options: option A predicted 26 times vs 16 gold (zero-shot 17).
+* Overconfidence without discrimination. Mean max-probability on wrong answers: zero-shot 0.52, step-5000 0.62
+  (12 wrong answers above 0.9), final 0.54 at T = 1.477. Hard ECE for final is 0.29 / 0.21 / 0.14 at
+  T = 1 / 1.477 / 2.748 (diagnostic only; zero-shot 0.13 / 0.13 / 0.05). The 2% holdout is easy,
+  in-distribution classification, so its temperature is far below what Hard needs; with accuracy near chance,
+  ECE is low only when predictions are nearly flat.
+* No analogue in the mix. v1 is 164.6k records of short classification / MCQ; the only Jev-style source is
+  typed_decisions (2,700 records, 1.6%, the only soft targets). Nothing trains multi-clause policy application,
+  date arithmetic, instruction-following judgments or trusted-vs-untrusted evidence. Easy / Original /
+  ToolACE / AG News improve because they match that mix; Hard does not.
+
+| family | n | chance | zero-shot | step-2000 | final |
+|---|---:|---:|---:|---:|---:|
+| long_policy | 19 | 30 | 32 | 21 | 21 |
+| multi_hop | 18 | 25 | 39 | 39 | 22 |
+| judge_hard | 17 | 50 | 41 | 41 | 41 |
+| temporal_numeric | 15 | 31 | 27 | 40 | 27 |
+| probability | 10 | 38 | 70 | 70 | 60 |
+| trap | 8 | 38 | 50 | 50 | 62 |
+| ambiguous | 7 | 32 | 14 | 14 | 14 |
+| tradeoff | 6 | 31 | 17 | 67 | 17 |
+| adversarial | 6 | 33 | 67 | 67 | 67 |
+| routing_hard | 5 | 20 | 80 | 60 | 100 |
+
+**Fixes, by expected impact** (none tunes on Hard):
+
+1. Long, rule-application training data with soft labels: policy / contract / billing documents of 1-4k
+   tokens with multi-clause decisions, date and amount arithmetic, planted distractors and injections.
+   v3 covers this only partly: jebadiah_synth and nanojev carry soft targets and mojev_mix has about 21% of
+   states over 1k tokens, but kev_suites and jebadiah_synth are mostly short (median 62 / 286 tokens).
+2. Select checkpoints on a non-test dev set that resembles Hard (e.g. a held-out slice of long kev_suites /
+   mojev_mix rows), not on the last step; v1's Hard peaked at step 2000 of 5,042.
+3. Fit temperature on a harder calibration set (kev_suites calibration split or a long-row holdout) instead
+   of the easy 2% holdout.
+4. Less drift from the base model: lower lr, one epoch, or down-weighting of the easy classification
+   sources; zero-shot already scores 40.5 on Hard.
+5. Soft-target or Brier loss and label smoothing on hard-label sources, to limit sharpening toward
+   surface-plausible answers.
+6. Minor: raise `max_state_tokens` to cover the longest Hard state (3.7k tokens); affects at most 3 items.
