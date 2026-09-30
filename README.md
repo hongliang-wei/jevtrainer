@@ -90,6 +90,21 @@ Built in (136 datasets, `jt data list`):
 * preference: helpsteer2 (five rubric scores), ultrafeedback, shp, hh_rlhf
 * support / misc: support_tickets, liar2, bias_in_bios, cola, subjectivity
 * vision: scienceqa_img, cauldron_ai2d / aokvqa / scienceqa / iconqa / tqa, onejev
+* more safety / preference: aegis2, beavertails, pku_saferlhf (safer / better), skywork_pref
+* Chinese (tag `zh`, Chinese instructions and option texts; `data/converters/zh.py`, `zh2.py`, `gui_zh.py`):
+  * news / apps / topics: tnews, thucnews (full articles), iflytek (119 app categories), csl_discipline,
+    fincuge_news
+  * intent / sentiment / stance: massive_intent_zh, massive_scenario_zh, kuake_qic, zh_shopping, zh_waimai,
+    zh_jdreview, zh_sentiment3, weibo_senti, chnsenticorp, weibo_emotion, fincuge_sentiment, c_stance
+  * safety / detection: cold, toxicn, tc260 (synthetic), hc3_zh, cvalues_rlhf (harmless half)
+  * matching / NLI / similarity: afqmc, lcqmc, bq_corpus, atec, pawsx_zh, chip_sts, kuake_qqr, kuake_qtr,
+    zh_stsb, qbqtc, cmnli, ocnli (non-commercial), csl, cluewsc
+  * retrieval: t2_rerank, cmedqa_rerank
+  * reading / exams / law / medicine: c3, chid, cail2018 (charge + sentence band), legal_case_zh,
+    cmexam, cmb; tools: glaive_toolcall_zh
+  * preference: cvalues_rlhf, zhihu_rlhf, dpo_zh, ultrafeedback_zh
+  * eval-only: ceval_val, cmmlu, agieval_zh, jecqa, financeiq, chinese_safetyqa, mmbench_cn, cmmmu,
+    cagui (Chinese Android GUI steps: action type + numbered element)
 
 ## Benchmarks
 
@@ -98,7 +113,9 @@ ToolACE, AG News, WildJailbreak; fetched by `jt data fetch intern`), `intern-cal
 (known-distribution pilot, scored by TVD), `core` (16 public benchmarks), `extended` (31 more:
 BBH, MuSR, CLadder, CRUXEval, TruthfulQA, ContractNLI, ESCI, When2Call, RAGTruth, ...), `vision`,
 `gui-v1` (held-out GUI splits: Multimodal-Mind2Web test task / website / domain, GUIAct web-single /
-web-multi / smartphone test, OmniACT test, WebLINX valid; 1,000 each).
+web-multi / smartphone test, OmniACT test, WebLINX valid; 1,000 each), `zh-dev` (validation splits
+of 24 Chinese training sources), `zh-bench` (C-Eval val, CMMLU, AGIEval Chinese, JEC-QA, FinanceIQ,
+Chinese-SafetyQA), `vision-zh` (MMBench-CN, CMMMU), `gui-zh` (CAGUI).
 
 Sources that need extra handling live in `data/converters/recovered.py`: GPQA and HLE (gated: accept
 the terms on the Hub and set `HF_TOKEN`; HLE keeps its text-only multiple-choice items), BFCL (JSON
