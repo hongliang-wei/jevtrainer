@@ -463,7 +463,15 @@ def chinese_safetyqa(split, cap, rng):
     import ast
 
     for i, r in enumerate(_rows("OpenStellarTeam/Chinese-SafetyQA", "chinese_safetyqa.jsonl")):
-        opts = r["options"] if isinstance(r["options"], dict) else ast.literal_eval(r["options"])
+        opts = r["options"]
+        if not isinstance(opts, dict):
+            try:
+                opts = json.loads(opts)
+            except ValueError:
+                try:
+                    opts = ast.literal_eval(opts)
+                except (ValueError, SyntaxError):
+                    continue
         keys = sorted(opts)
         if r["correct_answer"] in keys:
             rec = mcq_record(rid("csqa_safety", i), {"领域": r["cate"], "问题": r["question"]}, "哪个选项是正确答案？", [opts[k] for k in keys],
