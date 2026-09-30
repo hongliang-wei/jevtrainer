@@ -135,28 +135,49 @@ class Trainer:
         sched = torch.optim.lr_scheduler.LambdaLR(
             opt, lambda s: min(1.0, (s + 1) / max(1, warm)) * 0.5 * (1 + math.cos(math.pi * min(1.0, s / max(1, steps))))
         )
+        net, opt, sched = acc.prepare(net, opt, sched)
+        step, epoch, pos = 0, 0, 0
+        state_dir = self.latest_state() if c.resume else None
+        if c.resume and state_dir is None:
+            acc.print(f"resume: no step-N/state under {self.out}, starting from scratch")
+        if state_dir is not None:
+            acc.load_state(str(state_dir))
+            meta = json.loads((state_dir / "trainer.json").read_text(encoding="utf-8"))
+            step, epoch, pos = meta["step"], meta["epoch"], meta["pos"]
+            acc.print(f"resumed from {state_dir}: step={step} epoch={epoch} batch={pos}")
+
         workers = c.num_workers if os.name != "nt" else 0
         collate = Collator(b.readout, c.max_length, c.augment.to_config(), c.seed)
+        sampler = None
         if c.group_by_length:
-            loader = DataLoader(train, batch_sampler=LengthGroupedBatches(train, c.batch_size, c.seed), collate_fn=collate, num_workers=workers)
+            sampler = LengthGroupedBatches(train, c.batch_size, c.seed)
+            sampler.epoch, sampler.skip = epoch, pos
+            # own generator: worker seeding must not draw from the global RNG that dropout uses and resume restores
+            loader = DataLoader(train, batch_sampler=sampler, collate_fn=collate, num_workers=workers,
+                                generator=torch.Generator().manual_seed(c.seed))
         else:
+            if pos:
+                acc.print("resume: shuffle=True batches cannot be replayed; the resumed epoch uses a fresh order")
             loader = DataLoader(train, batch_size=c.batch_size, shuffle=True, collate_fn=collate, num_workers=workers, drop_last=True)
-        net, opt, sched = acc.prepare(net, opt, sched)
         if c.report_to != "none":
+            kw = {"name": self.out.name, "dir": os.environ.get("WANDB_DIR")}
+            if state_dir is not None and (self.out / "wandb_id.txt").exists():
+                kw.update(id=(self.out / "wandb_id.txt").read_text(encoding="utf-8").strip(), resume="allow")
             acc.init_trackers(
                 os.environ.get("WANDB_PROJECT", "jevtrainer"),
                 config=c.model_dump(),
-                init_kwargs={"wandb": {"name": self.out.name, "dir": os.environ.get("WANDB_DIR")}} if c.report_to == "wandb" else {},
+                init_kwargs={"wandb": kw} if c.report_to == "wandb" else {},
             )
             if c.report_to == "wandb" and acc.is_main_process:
                 (self.out / "wandb_id.txt").write_text(acc.get_tracker("wandb", unwrap=True).id, encoding="utf-8")
         acc.print(f"train={len(train)} holdout={len(hold)} steps={steps} trainable={count(body) + count(head):,}")
 
         log = open(self.out / "train_log.jsonl", "a", encoding="utf-8")
-        step, t0, running = 0, time.time(), []
+        t0, running = time.time(), []
         net.train()
         while step < steps:
             for batch in loader:
+                pos += 1
                 if batch is None:
                     continue
                 with acc.accumulate(net):
@@ -182,6 +203,8 @@ class Trainer:
                         acc.log(rec, step=step)
                 if c.save_steps and step % c.save_steps == 0:
                     self.save(b, acc, self.out / f"step-{step}")
+                    if c.save_state:
+                        self.save_state(acc, self.out / f"step-{step}" / "state", step, epoch, pos)
                 if c.eval_every and step % c.eval_every == 0 and hold:
                     val = self.validate(b, hold)
                     acc.print(json.dumps({"step": step, "holdout": val}))
@@ -190,6 +213,10 @@ class Trainer:
                     net.train()
                 if step >= steps:
                     break
+            else:
+                epoch, pos = epoch + 1, 0
+                if sampler is not None:
+                    sampler.epoch, sampler.skip = epoch, 0
         log.close()
 
         result = {"steps": step, "train_records": len(train)}
@@ -224,6 +251,23 @@ class Trainer:
         from jevtrainer.eval.metrics import summarize
 
         return summarize(self.collect(b, hold[:512]), b.temperature)
+
+    def latest_state(self) -> Path | None:
+        done = [p.parent for p in self.out.glob("step-*/state/trainer.json")]
+        return max(done, key=lambda p: int(p.parent.name.split("-")[1])) if done else None
+
+    def save_state(self, acc, path: Path, step: int, epoch: int, pos: int) -> None:
+        """Full training state for `resume`; trainer.json is written last and marks the copy complete."""
+        import shutil
+
+        acc.wait_for_everyone()
+        acc.save_state(str(path))
+        if not acc.is_main_process:
+            return
+        (path / "trainer.json").write_text(json.dumps({"step": step, "epoch": epoch, "pos": pos}), encoding="utf-8")
+        for old in self.out.glob("step-*/state"):
+            if old != path:
+                shutil.rmtree(old, ignore_errors=True)
 
     def save(self, b: Bundle, acc, path: Path) -> None:
         if not acc.is_main_process:

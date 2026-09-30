@@ -107,6 +107,8 @@ class TrainConfig(Strict):
     exclude_eval_overlap: bool = True
     exclude: list[str] = []  # extra benchmarks whose states are removed from training
     save_steps: int = 0
+    save_state: bool = True  # optimizer / scheduler / RNG / data position with the newest step-N (older copies are deleted)
+    resume: bool = False  # continue from the newest step-N/state in output_dir
     log_steps: int = 10
     report_to: Literal["none", "tensorboard", "wandb"] = "none"
 

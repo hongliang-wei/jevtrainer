@@ -25,18 +25,20 @@ class DecisionModel(nn.Module):
 
 class Collator:
     def __init__(self, readout: Readout, max_length: int, augment_cfg: AugmentConfig | None = None, seed: int = 0):
-        self.readout, self.max_length, self.aug = readout, max_length, augment_cfg
-        self.rng = random.Random(seed)
+        self.readout, self.max_length, self.aug, self.seed = readout, max_length, augment_cfg, seed
 
     def __call__(self, records: list[Record]) -> dict | None:
+        # seeded by the batch itself: loader workers each hold a copy of this object, and a resumed run
+        # must encode every batch exactly as the original run did
+        rng = random.Random("|".join([str(self.seed)] + [r.id for r in records])) if self.aug is not None else None
         if self.aug is not None:
-            records = augment(records, self.aug, self.rng)
+            records = augment(records, self.aug, rng)
         rows, used = [], []
         for r in records:
             if self.aug is not None:  # never change an evaluation task; unfit records are skipped instead
-                r = fit_options(r, self.readout.max_options, self.rng)
+                r = fit_options(r, self.readout.max_options, rng)
             try:
-                rr = self.readout.encode(r, self.rng if self.aug is not None else None)
+                rr = self.readout.encode(r, rng)
             except ValueError:
                 continue
             if any(len(x.input_ids) > self.max_length for x in rr):
@@ -79,25 +81,31 @@ def approx_length(r: Record) -> int:
 
 
 class LengthGroupedBatches:
-    """Shuffled batches of records with similar length (less padding). Re-shuffles every epoch."""
+    """Shuffled batches of records with similar length (less padding).
+
+    The order depends only on (seed, epoch), not on how often it was iterated: DataLoader with workers calls
+    iter() twice per epoch. The trainer sets `epoch` for each pass and `skip` to resume mid-epoch.
+    """
 
     def __init__(self, records: list[Record], batch_size: int, seed: int = 0, mega: int = 64):
         self.lengths = [approx_length(r) for r in records]
-        self.batch_size, self.mega, self.rng = batch_size, mega, random.Random(seed)
+        self.batch_size, self.mega, self.seed = batch_size, mega, seed
+        self.epoch, self.skip = 0, 0
 
     def __iter__(self):
+        rng = random.Random(f"{self.seed}:{self.epoch}")
         idx = list(range(len(self.lengths)))
-        self.rng.shuffle(idx)
+        rng.shuffle(idx)
         size = self.batch_size * self.mega
         batches = []
         for i in range(0, len(idx), size):
             chunk = sorted(idx[i : i + size], key=self.lengths.__getitem__)
             batches += [chunk[j : j + self.batch_size] for j in range(0, len(chunk) - self.batch_size + 1, self.batch_size)]
-        self.rng.shuffle(batches)
-        return iter(batches)
+        rng.shuffle(batches)
+        return iter(batches[self.skip :])
 
     def __len__(self):
-        return len(self.lengths) // self.batch_size
+        return len(self.lengths) // self.batch_size - self.skip
 
 
 def to_device(batch: dict, device) -> dict:

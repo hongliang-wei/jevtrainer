@@ -47,6 +47,11 @@ a suggestion. Any field can be overridden: `jt train my.yaml --set lr=5e-5 --set
 A run directory holds `config.yaml`, the adapter or full weights, `readout.safetensors`,
 `readout.json`, `calibration.json`, `train_log.jsonl`, `metrics.json` and `eval/results.md`.
 
+With `save_steps: N` every N steps writes `step-N/` (weights, usable by `jt eval`). The newest one
+also keeps `step-N/state/` (optimizer, scheduler, RNG and data position; older copies are deleted,
+turn off with `save_state: false`). After a crash, rerun the same command with `--set resume=true`:
+training continues from that step with the same batches it would have seen.
+
 ## Data
 
 Every source becomes the same record:
