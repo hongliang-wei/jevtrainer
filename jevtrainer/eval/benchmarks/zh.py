@@ -8,7 +8,8 @@ for name, n in [
     ("tnews", 300), ("thucnews", 280), ("iflytek", 300), ("fincuge_news", 300), ("massive_intent_zh", 300), ("zh_sentiment3", 300),
     ("c_stance", 300), ("toxicn", 300), ("cold", 300), ("tc260", 300), ("hc3_zh", 300), ("afqmc", 300), ("bq_corpus", 300),
     ("kuake_qqr", 300), ("zh_stsb", 300), ("t2_rerank", 300), ("cmnli", 300), ("c3", 300), ("chid", 300), ("cail2018", 300),
-    ("legal_case_zh", 300), ("cmexam", 300), ("cvalues_rlhf", 300), ("ultrafeedback_zh", 300),
+    ("legal_case_zh", 300), ("cmexam", 300), ("cvalues_rlhf", 300), ("ultrafeedback_zh", 300), ("amazon_zh", 300),
+    ("safety_prompts_zh", 300),
 ]:
     bench(f"{name}_dev", name, "validation", metric="accuracy", suite="zh-dev", area="zh", max_samples=n)
 

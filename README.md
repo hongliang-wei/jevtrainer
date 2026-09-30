@@ -64,7 +64,7 @@ everything into `$JEVTRAINER_CACHE`. Datasets marked `eval_only` can never enter
 and training records whose state (or any long text field of it) matches an evaluation record are
 dropped automatically; `--dry-run` reports how many.
 
-Built in (136 datasets, `jt data list`):
+Built in (238 datasets, `jt data list`):
 
 * typed-decision sets: typed_decisions, kev_suites, jebadiah_synth, mojev_mix, onejev (multimodal),
   pngwn_typed_v2 / pngwn_system_one (non-commercial); eval-only this_that_complex / this_that_spatial
@@ -90,16 +90,21 @@ Built in (136 datasets, `jt data list`):
 * preference: helpsteer2 (five rubric scores), ultrafeedback, shp, hh_rlhf
 * support / misc: support_tickets, liar2, bias_in_bios, cola, subjectivity
 * vision: scienceqa_img, cauldron_ai2d / aokvqa / scienceqa / iconqa / tqa, onejev
-* more safety / preference: aegis2, beavertails, pku_saferlhf (safer / better), skywork_pref
-* Chinese (tag `zh`, Chinese instructions and option texts; `data/converters/zh.py`, `zh2.py`, `gui_zh.py`):
+* more safety / preference: aegis2, beavertails, pku_saferlhf (safer / better), skywork_pref, salad (harm
+  domain + category), helpsteer3 (multi-turn, includes code and Chinese)
+* practical (`data/converters/practical.py`): prompt_injection, safeguard_injection, fake_jobs, atis,
+  fin_news_topic
+* Chinese (tag `zh`, Chinese instructions and option texts; `data/converters/zh.py`, `zh2.py`, `zh3.py`, `gui_zh.py`):
   * news / apps / topics: tnews, thucnews (full articles), iflytek (119 app categories), csl_discipline,
     fincuge_news
   * intent / sentiment / stance: massive_intent_zh, massive_scenario_zh, kuake_qic, zh_shopping, zh_waimai,
-    zh_jdreview, zh_sentiment3, weibo_senti, chnsenticorp, weibo_emotion, fincuge_sentiment, c_stance
-  * safety / detection: cold, toxicn, tc260 (synthetic), hc3_zh, cvalues_rlhf (harmless half)
+    zh_jdreview, zh_sentiment3, amazon_zh (stars), weibo_senti, chnsenticorp, weibo_emotion, fincuge_sentiment,
+    c_stance
+  * safety / detection: cold, toxicn, tc260 and safety_prompts_zh (both synthetic), hc3_zh, cvalues_rlhf
+    (harmless half)
   * matching / NLI / similarity: afqmc, lcqmc, bq_corpus, atec, pawsx_zh, chip_sts, kuake_qqr, kuake_qtr,
     zh_stsb, qbqtc, cmnli, ocnli (non-commercial), csl, cluewsc
-  * retrieval: t2_rerank, cmedqa_rerank
+  * retrieval: t2_rerank, mmarco_rerank_zh (non-commercial), cmedqa_rerank, cmedqa1_rerank
   * reading / exams / law / medicine: c3, chid, cail2018 (charge + sentence band), legal_case_zh,
     cmexam, cmb; tools: glaive_toolcall_zh
   * preference: cvalues_rlhf, zhihu_rlhf, dpo_zh, ultrafeedback_zh
@@ -114,7 +119,7 @@ ToolACE, AG News, WildJailbreak; fetched by `jt data fetch intern`), `intern-cal
 BBH, MuSR, CLadder, CRUXEval, TruthfulQA, ContractNLI, ESCI, When2Call, RAGTruth, ...), `vision`,
 `gui-v1` (held-out GUI splits: Multimodal-Mind2Web test task / website / domain, GUIAct web-single /
 web-multi / smartphone test, OmniACT test, WebLINX valid; 1,000 each), `zh-dev` (validation splits
-of 24 Chinese training sources), `zh-bench` (C-Eval val, CMMLU, AGIEval Chinese, JEC-QA, FinanceIQ,
+of 26 Chinese training sources), `zh-bench` (C-Eval val, CMMLU, AGIEval Chinese, JEC-QA, FinanceIQ,
 Chinese-SafetyQA), `vision-zh` (MMBench-CN, CMMMU), `gui-zh` (CAGUI).
 
 Sources that need extra handling live in `data/converters/recovered.py`: GPQA and HLE (gated: accept
