@@ -114,6 +114,8 @@ class Trainer:
         (self.out / "config.yaml").write_text(yaml.safe_dump(c.model_dump(), allow_unicode=True, sort_keys=False), encoding="utf-8")
         train, hold, report = self.load_data()
         (self.out / "data_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+        if not train:
+            raise ValueError(f"no training records left after holdout={c.holdout}; see {self.out / 'data_report.json'}")
 
         acc = Accelerator(
             mixed_precision="no" if c.dtype == "fp32" else c.dtype,
