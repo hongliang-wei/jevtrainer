@@ -30,8 +30,10 @@ recipe rounds without improvement.
 Training records are dropped when their normalised state, or any long text field inside it, equals
 one in the evaluated suites (`exclude_eval_overlap: true`, reported in `data_report.json`). All seven
 suites and `typed_decisions_hf_test` are `eval_only`. JevBench has no training split and is never trained on.
-v4 adds the GUI datasets' train splits and also evaluates `gui-v1`, built from their test / valid splits
-(Mind2Web's are unseen tasks, websites and domains); OneJev's Mind2Web rows come from the train split.
+v4's long-document sources train on their train splits only; their validation splits form `longdoc-dev`
+(checkpoint selection) and their test splits are never used. The `gui-v1` suite (GUI datasets' test / valid
+splits; Mind2Web's are unseen tasks, websites and domains) is evaluated after training; OneJev's Mind2Web
+rows come from the train split.
 
 Differences from Intern's inputs that cannot be closed with open data:
 
@@ -141,3 +143,25 @@ has no `gold_probs` (Intern's evaluator expects 10 from private provenance), so 
 5. Soft-target or Brier loss and label smoothing on hard-label sources, to limit sharpening toward
    surface-plausible answers.
 6. Minor: raise `max_state_tokens` to cover the longest Hard state (3.7k tokens); affects at most 3 items.
+
+### v4: long-document decisions
+
+`configs/repro/intern_0.8b_v4.yaml` = v3 + 30 long-document sources (`data/converters/longdoc.py`,
+`longdoc2.py`, train splits only), 1 epoch, `max_state_tokens` 4096. No standalone GUI datasets.
+States over 14k characters (~3.5k tokens) are skipped rather than cut, except patents (topic survives
+truncation to 12k characters) and QASPER (evidence paragraphs always kept).
+
+| group | sources | records |
+|---|---|---:|
+| v3 | text 184,597; Jev-format 151,439; multimodal 104,707 | 440,743 |
+| rules / legal | ShARC 6,000, LegalBench rule tasks 2,443, consumer contracts 316, CUAD 3,000, MAUD 4,000, ECtHR 7,040, LEDGAR 3,000 | 25,799 |
+| reading / multi-hop / time | QuALITY 158 (79 x2), MuSiQue 10,000, HotpotQA 6,000, 2Wiki 4,000, WikiHop 5,000, TimeQA 6,000, QASPER 638 (x2), ReClor 4,638 | 36,434 |
+| numbers in reports / tables | TAT-QA 2,192, FinQA 5,965, DROP 5,000, TabFact 5,000 | 18,157 |
+| verification / faithfulness | DocNLI 6,000, WiCE 3,097, HaluEval summaries 4,000 | 13,097 |
+| judging / agent outcomes | PPE-IFEval 1,576, RewardBench 2,350, RewardBench 2 1,305, MT-Bench human (soft) 1,933, SWE-agent patches 6,000 | 13,164 |
+| triage / classification | phishing 4,000, patents 3,000, hyperpartisan 495 | 7,495 |
+
+554,889 records after overlap removal (615, all from v3's sources); 543,792 train + 11,097 holdout,
+8,497 steps at batch 16 x 4. Long-doc is 20.6% of records; most of its states are 1-3.5k tokens.
+The trainer fits temperature only on the holdout; `longdoc-dev` (20 validation splits, <= 300 rows each)
+is evaluated per checkpoint after training for checkpoint selection and as a harder calibration check.
