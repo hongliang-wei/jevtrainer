@@ -90,6 +90,8 @@ def kev_suites(split, cap, rng):
                     q = dict(q)
                     label = q.pop("label", None)
                     q.pop("src", None)
+                    if isinstance(q.get("instructions"), dict):  # {"question": ..., "focus": ...}
+                        q["instructions"] = " ".join(str(v) for v in q["instructions"].values() if v)
                     qs[name] = q
                     if label is not None:
                         ts[name] = {"label": label if not isinstance(label, bool) else ("yes" if label else "no"), "probabilities": q.pop("target", None)}
@@ -158,7 +160,7 @@ def onejev(split, cap, rng):
                 continue
 
 
-register(DatasetSpec("kev_suites", kev_suites, ("train", "validation", "test"), "jaredpalmer/kev-suites (all public suites)", "see per suite", "typed",
+register(DatasetSpec("kev_suites", kev_suites, ("train", "validation", "test"), "jaredpalmer/kev-suites (all public suites)", "see per suite", "typed", version="2",
                      description="Kev's frozen decision suites; states deduplicated across suites"))
 register(DatasetSpec("mojev_mix", mojev_mix, ("train", "validation", "test"), "MoLeMo-Lab/mojev-mix", "see upstream", "typed"))
 register(DatasetSpec("onejev", onejev, ("train",), "OmniJev/OneJev-Data", "per source (licenses.csv); some research-only / non-commercial", "typed",

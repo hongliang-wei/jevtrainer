@@ -54,6 +54,8 @@ class Question:
     def validate(self, name: str) -> None:
         if self.type not in QTYPES:
             raise ValueError(f"question '{name}': type must be one of {QTYPES}, got {self.type!r}")
+        if not isinstance(self.instructions, str):
+            raise ValueError(f"question '{name}': instructions must be text, got {type(self.instructions).__name__}")
         n = len(self.labels())
         if self.type == "choice" and not (isinstance(self.criteria, dict) and 2 <= n <= 255):
             raise ValueError(f"question '{name}': choice needs a dict of 2..255 options, got {n}")
