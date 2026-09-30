@@ -278,17 +278,24 @@ def _aguvis_parse(row):
     return {"task": m.group(1).strip(), "prev": prev, "step": step.group(1).strip() if step else None, "type": _code_type(code)}
 
 
+_EPISODE = re.compile(r"(_step|step|/screenshot_|_)\d+(\.(jpg|png))+$")
+
+
+def _similar(a: str, b: str) -> bool:
+    """Paraphrases of the gold step are not valid distractors."""
+    x, y = set(re.findall(r"\w+", a.lower())), set(re.findall(r"\w+", b.lower()))
+    return len(x & y) / max(1, len(x | y)) > 0.5
+
+
 def _aguvis(json_name: str, images: str, name: str, max_rows: int | None = None):
     """images: 'zip:<file>' inside xlangai/aguvis-stage2, or 'odyssey' for per-file OpenGVLab/GUI-Odyssey screenshots."""
 
     def build(split, cap, rng):
-        from PIL import Image
-
         rows = json.load(open(_dl("xlangai/aguvis-stage2", json_name), encoding="utf-8"))
         parsed = [(r["image"], p) for r in rows if (p := _aguvis_parse(r)) and p["step"] and p["type"]]
-        by_task = defaultdict(list)
+        by_episode = defaultdict(list)
         for img, p in parsed:
-            by_task[p["task"]].append(p)
+            by_episode[_EPISODE.sub("", img)].append(p)
         steps = [p["step"] for _, p in parsed]
         types = Counter(p["type"] for _, p in parsed)
         vocab = {t: AGUVIS_ACTIONS[t] for t, c in types.items() if c >= 20}
@@ -300,11 +307,13 @@ def _aguvis(json_name: str, images: str, name: str, max_rows: int | None = None)
                 return
             if p["type"] not in vocab:
                 continue
-            later = [q["step"] for q in by_task[p["task"]] if len(q["prev"]) > len(p["prev"]) and q["step"] != p["step"]]
-            opts = list(dict.fromkeys([p["step"]] + rng.sample(later, min(len(later), 2))))
-            while len(opts) < rng.randint(4, 6):
+            later = [q["step"] for q in by_episode[_EPISODE.sub("", img_name)] if len(q["prev"]) > len(p["prev"])]
+            later = [s for s in dict.fromkeys(later) if not _similar(s, p["step"])]
+            opts = [p["step"]] + rng.sample(later, min(len(later), 2))
+            want = rng.randint(4, 6)
+            while len(opts) < want:
                 s = rng.choice(steps)
-                if s not in opts:
+                if not any(_similar(s, o) for o in opts):
                     opts.append(s)
             rng.shuffle(opts)
             img = opener(img_name)
