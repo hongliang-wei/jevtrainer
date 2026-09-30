@@ -3,7 +3,8 @@
 # Run directly after v1 (v2 skipped). Images share a per-record pixel budget (~2560 vision tokens),
 # so 4-screenshot trajectories and 32-frame videos fit in max_length.
 # Reproduce Intern-Decision-0.8B with open data: marker readout, full fine-tuning of Qwen3.5-0.8B,
-# full-vocabulary cross-entropy at the placeholder positions (Intern's recipe), 2 epochs.
+# full-vocabulary cross-entropy at the placeholder positions (Intern's recipe), 1 epoch
+# (v1's Hard peaked around 0.8 epoch; 2 epochs of v3 would take 75-90 h).
 # Evaluated on Intern's own accuracy-v1 bundle; its test states are removed from training.
 model: Qwen/Qwen3.5-0.8B
 readout: marker
@@ -58,7 +59,7 @@ augment:
   p_pack: 0.15      # merge short single-question records into multi-question states
   pack_max: 4
 
-epochs: 2
+epochs: 1
 lr: 5.0e-6
 weight_decay: 0.01
 warmup_ratio: 0.03

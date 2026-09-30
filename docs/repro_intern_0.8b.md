@@ -58,7 +58,10 @@ sources. `configs/repro/intern_0.8b_v3.yaml` adds:
 | image MCQ | 10,000 sampled in proportion to size: scienceqa_img 1,562, cauldron iconqa 4,125, aokvqa 2,081, scienceqa 1,250, ai2d 609, tqa 373 | 10,000 |
 
 440,743 records after overlap removal (615 removed, all from typed_decisions / toolace / agnews /
-jailbreak_classification; none from the new sources); 431,929 train + 8,814 holdout, 13,498 steps at batch 16 x 4.
+jailbreak_classification; none from the new sources); 431,929 train + 8,814 holdout, 6,749 steps at batch 16 x 4.
+
+v3 trains for one epoch instead of two: v1's Hard peaked around 0.8 epoch and degraded after, and two
+epochs of v3 would take 75-90 h.
 
 Images: Qwen3.5's processor allows up to 16M pixels per image; one vision token covers 32x32 pixels.
 Cached images give <= 2,209 tokens each, but OneJev's 4-screenshot trajectories reach 3,520 vision
