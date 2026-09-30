@@ -25,6 +25,20 @@ from jevtrainer.train.batching import Collator, DecisionModel, LengthGroupedBatc
 from jevtrainer.train.calibrate import fit
 
 
+def flatten(d, prefix: str = "") -> dict[str, float]:
+    """Nested metrics -> {"a/b/c": number} for experiment trackers."""
+    if isinstance(d, bool):
+        return {}
+    if isinstance(d, (int, float)):
+        return {prefix: d}
+    if isinstance(d, dict):
+        out = {}
+        for k, v in d.items():
+            out.update(flatten(v, f"{prefix}/{k}" if prefix else str(k)))
+        return out
+    return {}
+
+
 @TRAINERS.register("sft")
 class Trainer:
     def __init__(self, cfg: TrainConfig):
@@ -127,7 +141,13 @@ class Trainer:
             loader = DataLoader(train, batch_size=c.batch_size, shuffle=True, collate_fn=collate, num_workers=workers, drop_last=True)
         net, opt, sched = acc.prepare(net, opt, sched)
         if c.report_to != "none":
-            acc.init_trackers("jevtrainer", config=c.model_dump())
+            acc.init_trackers(
+                os.environ.get("WANDB_PROJECT", "jevtrainer"),
+                config=c.model_dump(),
+                init_kwargs={"wandb": {"name": self.out.name, "dir": os.environ.get("WANDB_DIR")}} if c.report_to == "wandb" else {},
+            )
+            if c.report_to == "wandb" and acc.is_main_process:
+                (self.out / "wandb_id.txt").write_text(acc.get_tracker("wandb", unwrap=True).id, encoding="utf-8")
         acc.print(f"train={len(train)} holdout={len(hold)} steps={steps} trainable={count(body) + count(head):,}")
 
         log = open(self.out / "train_log.jsonl", "a", encoding="utf-8")
@@ -161,7 +181,10 @@ class Trainer:
                 if c.save_steps and step % c.save_steps == 0:
                     self.save(b, acc, self.out / f"step-{step}")
                 if c.eval_every and step % c.eval_every == 0 and hold:
-                    acc.print(json.dumps({"step": step, "holdout": self.validate(b, hold)}))
+                    val = self.validate(b, hold)
+                    acc.print(json.dumps({"step": step, "holdout": val}))
+                    if c.report_to != "none":
+                        acc.log(flatten(val, "holdout"), step=step)
                     net.train()
                 if step >= steps:
                     break
@@ -185,6 +208,8 @@ class Trainer:
 
             result["benchmarks"] = run_benchmarks(b, c.eval_dataset, self.out / "eval", c.eval_max_samples)
         (self.out / "metrics.json").write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+        if c.report_to != "none":
+            acc.log(flatten(result, "final"), step=step)
         acc.end_training()
         return result
 

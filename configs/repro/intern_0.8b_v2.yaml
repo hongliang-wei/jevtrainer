@@ -52,4 +52,5 @@ max_length: 6144
 holdout: 0.02
 eval_dataset: intern-accuracy-v1
 save_steps: 1000
+report_to: wandb
 

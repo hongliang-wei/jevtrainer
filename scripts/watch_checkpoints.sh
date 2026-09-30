@@ -11,10 +11,12 @@ while true; do
       echo "$(date) evaluating $ck"
       jt eval --set checkpoint="$ck" --set benchmarks="$SUITE" --set output_dir="$ck/eval" > "$ck/eval.log" 2>&1
       python scripts/intern_table.py "$RUN"
+      [ -n "${WANDB_API_KEY:-}" ] && python scripts/wandb_upload.py "$RUN" > "$RUN/wandb_upload.log" 2>&1
     fi
   done
   if [ -f "$RUN/metrics.json" ]; then
     python scripts/intern_table.py "$RUN"
+    [ -n "${WANDB_API_KEY:-}" ] && python scripts/wandb_upload.py "$RUN" > "$RUN/wandb_upload.log" 2>&1
     exit 0
   fi
   sleep 120
