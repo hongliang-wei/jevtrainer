@@ -27,7 +27,7 @@ def hermes_tools(split, cap, rng):
             rows.append((user, catalog, m.group(1)))
     pool = sorted({(n, d) for _, c, _ in rows for n, d in c.items()})
     for i, (req, catalog, gold) in enumerate(rows[:cap]):
-        yield _tool_record("hermes", i, req, catalog, gold, pool, rng, k_range=(len(catalog), max(len(catalog), 8)))
+        yield _tool_record("hermes", i, req, catalog, gold, pool, rng, k_range=(max(3, len(catalog)), max(len(catalog), 8)))
 
 
 W2C = {

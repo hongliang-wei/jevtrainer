@@ -65,7 +65,7 @@ def esci(split, cap, rng):
 
 
 def contract_nli(split, cap, rng):
-    ds = take(hf("kiddothe2b/contract-nli", "contractnli_a", split=split, revision="refs/convert/parquet"), cap, rng)
+    ds = take(hf("kiddothe2b/contract-nli", "default", split=split, revision="refs/convert/parquet"), cap, rng)
     names = ["contradiction", "entailment", "neutral"]
     for i, r in enumerate(ds):
         label = names[r["label"]] if isinstance(r["label"], int) else str(r["label"]).lower()
