@@ -292,7 +292,8 @@ def _aguvis(json_name: str, images: str, name: str, max_rows: int | None = None)
 
     def build(split, cap, rng):
         rows = json.load(open(_dl("xlangai/aguvis-stage2", json_name), encoding="utf-8"))
-        parsed = [(r["image"], p) for r in rows if (p := _aguvis_parse(r)) and p["step"] and p["type"]]
+        parsed = [(r["image"][-1] if isinstance(r["image"], list) else r["image"], p)  # list = history screenshots, last is current
+                  for r in rows if (p := _aguvis_parse(r)) and p["step"] and p["type"]]
         by_episode = defaultdict(list)
         for img, p in parsed:
             by_episode[_EPISODE.sub("", img)].append(p)
