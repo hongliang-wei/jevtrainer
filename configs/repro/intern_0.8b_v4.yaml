@@ -1,12 +1,14 @@
-# v4 = v3 + standalone GUI / browser / computer-use datasets (train splits only; data/converters/gui.py).
-# Caps: v3 is ~442k records, ~76k with images, ~33k of those already GUI (OneJev: AMEX, Multimodal-Mind2Web
-# train, OSWorld, AgentRewardBench, ...). The GUI sets below add ~40k records (~8% of the mixture), so GUI
-# screenshots become about half of the image records without dominating: element choice on marked
-# screenshots (Mind2Web, GUIAct, OmniACT, WebLINX) ~22k, AGUVIS next-step trajectories ~18k. AMEX and
-# Mind2Web get less since OneJev already covers them; MiniWoB is small, low-res and easy.
-# Held-out GUI splits form the gui-v1 suite (evaluated at the end; their states are removed from training).
+# v4 = v3 + long-document decisions (data/converters/longdoc.py, longdoc2.py; train splits only).
+# v1/v3 never trained on states over 1k tokens, and JevBench-Hard's long policy / multi-hop / numeric items
+# got worse with training. The long-doc group adds ~110k records (~20% of records, a larger share of tokens):
+# rule application (ShARC, LegalBench, CUAD, MAUD, ECtHR, LEDGAR), long reading and multi-hop (QuALITY,
+# MuSiQue, HotpotQA, 2Wiki, WikiHop, TimeQA, QASPER, ReClor), numbers over reports and tables (TAT-QA, FinQA,
+# DROP, TabFact), verification / faithfulness (DocNLI, WiCE, HaluEval), judging responses and agent outcomes
+# (PPE-IFEval, RewardBench 1/2, MT-Bench human votes as soft targets, SWE-agent patches), and document triage
+# (phishing, patents, hyperpartisan news). Most states are 1-3.5k tokens, so max_state_tokens is 4096.
+# No standalone GUI datasets: GUI data comes only from OneJev, as in v3.
 # Reproduce Intern-Decision-0.8B with open data: marker readout, full fine-tuning of Qwen3.5-0.8B,
-# full-vocabulary cross-entropy at the placeholder positions (Intern's recipe), 2 epochs.
+# full-vocabulary cross-entropy at the placeholder positions (Intern's recipe), 1 epoch.
 model: Qwen/Qwen3.5-0.8B
 readout: marker
 readout_options:
@@ -53,21 +55,42 @@ dataset:
   - {name: cauldron_scienceqa, max_samples: 1250}
   - {name: cauldron_ai2d, max_samples: 609}
   - {name: cauldron_tqa, max_samples: 373}
-  # GUI element choice on Set-of-Mark screenshots (+ action type for GUIAct)
-  - {name: mm_mind2web, max_samples: 5000}
-  - {name: guiact_web_single, max_samples: 3500}
-  - {name: guiact_web_multi, max_samples: 3500}
-  - {name: guiact_smartphone, max_samples: 3500}
-  - {name: omniact, max_samples: 3500}
-  - {name: weblinx, max_samples: 3000}         # cc-by-nc-sa: non-commercial
-  # GUI next-step choice + action type on AGUVIS trajectories
-  - {name: aguvis_aitw, max_samples: 2500}
-  - {name: aguvis_coat, max_samples: 2000}
-  - {name: aguvis_miniwob, max_samples: 1500}
-  - {name: aguvis_guide, max_samples: 2500}
-  - {name: aguvis_android_control, max_samples: 3500}
-  - {name: aguvis_amex, max_samples: 3000}
-  - {name: aguvis_gui_odyssey, max_samples: 3000}
+  # long-doc: rules, contracts, cases
+  - {name: sharc, max_samples: 6000}
+  - {name: legalbench_rules}
+  - {name: legalbench_consumer_contracts}   # cc-by-nc
+  - {name: legalbench_cuad, max_samples: 3000}
+  - {name: maud, max_samples: 4000}
+  - {name: ecthr}
+  - {name: ledgar, max_samples: 3000}
+  # long-doc: reading, multi-hop, time
+  - {name: quality, weight: 2}               # 79 articles x <= 5 questions
+  - {name: musique, max_samples: 10000}
+  - {name: hotpotqa, max_samples: 6000}
+  - {name: wiki2mh, max_samples: 4000}
+  - {name: wikihop, max_samples: 5000}
+  - {name: timeqa, max_samples: 6000}
+  - {name: qasper, weight: 2}
+  - {name: reclor}                           # research only
+  # long-doc: numbers in reports and tables
+  - {name: tatqa}
+  - {name: finqa}
+  - {name: drop, max_samples: 5000}
+  - {name: tabfact, max_samples: 5000}
+  # long-doc: verification and faithfulness
+  - {name: docnli, max_samples: 6000}
+  - {name: wice}
+  - {name: halueval_summ, max_samples: 4000}
+  # long-doc: judging responses and agent outcomes
+  - {name: ppe_ifeval}
+  - {name: reward_bench}
+  - {name: reward_bench2}
+  - {name: mt_bench_human}                   # soft targets from expert votes
+  - {name: swe_agent, max_samples: 6000}    # balanced resolved / unresolved
+  # long-doc: document triage
+  - {name: phishing, max_samples: 4000}
+  - {name: patents, max_samples: 3000}
+  - {name: hyperpartisan}
 
 augment:
   p_none: 0.05
@@ -75,16 +98,16 @@ augment:
   p_pack: 0.15      # merge short single-question records into multi-question states
   pack_max: 4
 
-epochs: 2
+epochs: 1
 lr: 5.0e-6
 weight_decay: 0.01
 warmup_ratio: 0.03
 batch_size: 16
 grad_accum: 4
-max_state_tokens: 3072
+max_state_tokens: 4096
 max_length: 6144
 num_workers: 8    # image decoding + processor run in the loader (~0.1 s per OneJev record)
 holdout: 0.02
-eval_dataset: [intern-accuracy-v1, gui-v1]
+eval_dataset: intern-accuracy-v1
 save_steps: 1000
 report_to: wandb
