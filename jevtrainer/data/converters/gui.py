@@ -367,7 +367,7 @@ def _image_opener(spec: str):
 
 
 # ---- OmniACT (desktop + web, labelled element boxes) --------------------------------
-_XY = re.compile(r"pyautogui\.(?:click|doubleClick|rightClick|moveTo)\(\s*([\d.]+)\s*,\s*([\d.]+)")
+_XY = re.compile(r"pyautogui\.(?:click|doubleClick|rightClick|moveTo)\(\s*([\d.]+)\s*,\s*([\d.]+)", re.I)
 
 
 def omniact(split, cap, rng):
@@ -401,7 +401,7 @@ def omniact(split, cap, rng):
         if not task or not xy:
             continue
         boxes = [(tuple(b["top_left"]) + (b["bottom_right"][0] - b["top_left"][0], b["bottom_right"][1] - b["top_left"][1]),
-                  b["label"].replace("_", " ")) for b in json.loads(z.read(paths["box"])).values() if b.get("valid") and isinstance(b.get("label"), str) and b["label"] != "NA"]
+                  b["label"].replace("_", " ")) for b in json.loads(z.read(paths["box"])).values() if b.get("valid", True) and isinstance(b.get("label"), str) and b["label"] != "NA"]
         px, py = map(float, xy.groups())
         inside = [b for b in boxes if b[0][0] <= px <= b[0][0] + b[0][2] and b[0][1] <= py <= b[0][1] + b[0][3]]
         if not inside:
