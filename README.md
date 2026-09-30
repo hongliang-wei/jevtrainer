@@ -64,7 +64,7 @@ everything into `$JEVTRAINER_CACHE`. Datasets marked `eval_only` can never enter
 and training records whose state (or any long text field of it) matches an evaluation record are
 dropped automatically; `--dry-run` reports how many.
 
-Built in (238 datasets, `jt data list`):
+Built in (243 datasets, `jt data list`):
 
 * typed-decision sets: typed_decisions, kev_suites, jebadiah_synth, mojev_mix, onejev (multimodal),
   pngwn_typed_v2 / pngwn_system_one (non-commercial); eval-only this_that_complex / this_that_spatial
@@ -93,8 +93,8 @@ Built in (238 datasets, `jt data list`):
 * more safety / preference: aegis2, beavertails, pku_saferlhf (safer / better), skywork_pref, salad (harm
   domain + category), helpsteer3 (multi-turn, includes code and Chinese)
 * practical (`data/converters/practical.py`): prompt_injection, safeguard_injection, fake_jobs, atis,
-  fin_news_topic
-* Chinese (tag `zh`, Chinese instructions and option texts; `data/converters/zh.py`, `zh2.py`, `zh3.py`, `gui_zh.py`):
+  fin_news_topic, esconv (support strategy, non-commercial)
+* Chinese (tag `zh`, Chinese instructions and option texts; `data/converters/zh*.py`, `gui_zh.py`):
   * news / apps / topics: tnews, thucnews (full articles), iflytek (119 app categories), csl_discipline,
     fincuge_news
   * intent / sentiment / stance: massive_intent_zh, massive_scenario_zh, kuake_qic, zh_shopping, zh_waimai,
@@ -107,7 +107,9 @@ Built in (238 datasets, `jt data list`):
   * retrieval: t2_rerank, mmarco_rerank_zh (non-commercial), cmedqa_rerank, cmedqa1_rerank
   * reading / exams / law / medicine: c3, chid, cail2018 (charge + sentence band), legal_case_zh,
     cmexam, cmb; tools: glaive_toolcall_zh
-  * preference: cvalues_rlhf, zhihu_rlhf, dpo_zh, ultrafeedback_zh
+  * proofreading / dialogue: csc (spelling errors), text_correction_zh (law, medical, official documents),
+    cdconv (chatbot contradiction type, non-commercial)
+  * preference: cvalues_rlhf, zhihu_rlhf, dpo_zh, ultrafeedback_zh, dpo_pairs_zh (translated)
   * eval-only: ceval_val, cmmlu, agieval_zh, jecqa, financeiq, chinese_safetyqa, mmbench_cn, cmmmu,
     cagui (Chinese Android GUI steps: action type + numbered element)
 

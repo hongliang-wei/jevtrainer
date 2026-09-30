@@ -1,6 +1,6 @@
 """Practical English decisions: prompt-injection detection, flight-booking intents (ATIS), financial news
 topics, fraudulent job postings, multi-turn response preference (HelpSteer3, includes Chinese and code),
-and harmful-question taxonomy (Salad-Data)."""
+emotional-support strategies (ESConv) and harmful-question taxonomy (Salad-Data)."""
 
 from __future__ import annotations
 
@@ -103,6 +103,36 @@ def salad(split, cap, rng):
         yield Record(rid("salad", r["qid"]), {"request": r["question"]}, qs, ts, meta={"area": "safety", "source": r["source"]})
 
 
+ESCONV = {"Question": "ask about the situation or feelings", "Restatement or Paraphrasing": "restate what the seeker said",
+          "Reflection of feelings": "name and reflect the seeker's feelings", "Self-disclosure": "share a similar own experience",
+          "Affirmation and Reassurance": "affirm strengths, reassure", "Providing Suggestions": "suggest what to do",
+          "Information": "give useful facts or resources", "Others": "greetings, small talk, other"}
+
+
+def esconv(split, cap, rng):
+    """Which support strategy the next supporter turn uses, given the dialogue so far."""
+    import json
+
+    fn = {"train": "train.txt", "validation": "valid.txt", "test": "test.txt"}[split]
+    with open(_path("thu-coai/esconv", fn), encoding="utf-8") as f:
+        dialogs = [json.loads(line) for line in f if line.strip()]
+    items = []
+    for d, conv in enumerate(dialogs):
+        turns = conv["dialog"]
+        for t, turn in enumerate(turns):
+            strat = (turn.get("annotation") or {}).get("strategy") or turn.get("strategy")
+            if t >= 2 and turn.get("speaker") in ("supporter", "sys") and strat in ESCONV:
+                items.append((d, t, strat))
+    rng.shuffle(items)
+    for d, t, strat in items[:cap]:
+        conv = dialogs[d]
+        hist = "\n".join(f"{'seeker' if x['speaker'] in ('seeker', 'usr') else 'supporter'}: {x['text'].strip()}" for x in conv["dialog"][:t])
+        st = {"problem": f"{conv.get('emotion_type', '')} / {conv.get('problem_type', '')}", "situation": conv.get("situation", ""),
+              "dialogue": hist[-3500:]}
+        yield choice_record(rid("esconv", split, d, t), st, "Which strategy should the supporter use in the next turn?", dict(ESCONV), strat,
+                            area="dialogue")
+
+
 register(DatasetSpec("prompt_injection", _injection("prompt_injection", "deepset/prompt-injections"), ("train", "test"), "deepset/prompt-injections",
                      "apache-2.0", "security", description="English + some German"))
 register(DatasetSpec("safeguard_injection", _injection("safeguard_injection", "xTRam1/safe-guard-prompt-injection"), ("train", "test"),
@@ -112,5 +142,6 @@ register(DatasetSpec("fin_news_topic", fin_news_topic, ("train", "validation"), 
 register(DatasetSpec("fake_jobs", fake_jobs, S3, "victor/real-or-fake-fake-jobposting-prediction (EMSCAD, balanced, re-split)", "cc0-1.0", "security"))
 register(DatasetSpec("helpsteer3", helpsteer3, S3, "nvidia/HelpSteer3:preference (ties dropped; train re-split; test = upstream validation)", "cc-by-4.0",
                      "preference", description="general, STEM, code, multilingual (incl. Chinese)"))
+register(DatasetSpec("esconv", esconv, S3, "thu-coai/esconv (supporter turns with a strategy label)", "cc-by-nc-4.0", "dialogue", tags=["nc"]))
 register(DatasetSpec("salad", salad, S3, "OpenSafetyLab/Salad-Data:base_set (re-split)", "apache-2.0", "safety",
                      description="harm domain (6) and category (16)"))
