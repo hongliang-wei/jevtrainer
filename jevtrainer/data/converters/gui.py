@@ -17,6 +17,7 @@ import base64
 import io
 import json
 import re
+import threading
 import zipfile
 from collections import Counter, defaultdict
 
@@ -349,9 +350,15 @@ def _image_opener(spec: str):
             index.setdefault(f.rsplit("/", 1)[-1], f)
             index.setdefault(f.split("/", 1)[-1], f)
 
+        lock = threading.Lock()  # ZipFile reads are not thread-safe
+
         def open_zip(name):
             f = index.get(name) or index.get(name.rsplit("/", 1)[-1])
-            return Image.open(io.BytesIO(z.read(f))) if f else None
+            if not f:
+                return None
+            with lock:
+                data = z.read(f)
+            return Image.open(io.BytesIO(data))
 
         return open_zip
     if spec == "odyssey":
@@ -439,7 +446,7 @@ def weblinx(split, cap, rng):
     for r in rows:
         uid = re.search(r'uid="([\w-]+)"', r["action"]).group(1)
         cands = []
-        for line in r["candidates"].split("\n"):
+        for line in (r["candidates"] or "").split("\n"):
             m = _WL_CAND.match(line.strip())
             if m:
                 t = _WL_TEXT.search(line)
