@@ -228,9 +228,9 @@ def _guiact_record(d, row, vocab, rng, platform, Image):
     sx, sy = img.width / d["image_size"]["width"], img.height / d["image_size"]["height"]
     elems = []
     for e in row["elements"] or []:
-        p = e.get("position") or e.get("rect")  # smartphone: position/id, web: rect/uid
-        desc = " ".join(x for x in (e.get("ui_type"), (e.get("text") or "").strip()[:60]) if x) or "element"
-        elems.append(((p["x"] * sx, p["y"] * sy, p["width"] * sx, p["height"] * sy), desc, e.get("id", e.get("uid"))))
+        p = e.get("position") or e.get("rect")  # smartphone: position/id, web: rect/uid (web-multi "id" is the HTML id)
+        desc = " ".join(x for x in (e.get("ui_type") or e.get("type"), (e.get("text") or "").strip()[:60]) if x) or "element"
+        elems.append(((p["x"] * sx, p["y"] * sy, p["width"] * sx, p["height"] * sy), desc, e["uid"] if "uid" in e else e.get("id")))
     state = {"task": d["question"], "previous_actions": d["actions_history"] or "none"}
     key = rid("guiact", platform, d["uid"])
     tq = type_question(vocab, a["name"])
