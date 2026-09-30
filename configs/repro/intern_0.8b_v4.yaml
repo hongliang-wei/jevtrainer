@@ -1,0 +1,90 @@
+# v4 = v3 + standalone GUI / browser / computer-use datasets (train splits only; data/converters/gui.py).
+# Caps: v3 is ~442k records, ~76k with images, ~33k of those already GUI (OneJev: AMEX, Multimodal-Mind2Web
+# train, OSWorld, AgentRewardBench, ...). The GUI sets below add ~40k records (~8% of the mixture), so GUI
+# screenshots become about half of the image records without dominating: element choice on marked
+# screenshots (Mind2Web, GUIAct, OmniACT, WebLINX) ~22k, AGUVIS next-step trajectories ~18k. AMEX and
+# Mind2Web get less since OneJev already covers them; MiniWoB is small, low-res and easy.
+# Held-out GUI splits form the gui-v1 suite (evaluated at the end; their states are removed from training).
+# Reproduce Intern-Decision-0.8B with open data: marker readout, full fine-tuning of Qwen3.5-0.8B,
+# full-vocabulary cross-entropy at the placeholder positions (Intern's recipe), 2 epochs.
+model: Qwen/Qwen3.5-0.8B
+readout: marker
+readout_options:
+  full_vocab_loss: true
+  image_pixel_budget: 2621440   # 2560 x 32 x 32: total pixels over a record's images
+finetune: full
+output_dir: runs/repro/intern_0.8b_v4
+
+dataset:
+  # same decision types as the test suites (different rows)
+  - {name: typed_decisions, weight: 3}     # 1,200 states x 5 questions, teacher probabilities
+  - {name: agnews, max_samples: 20000}
+  - {name: toolace, max_samples: 10000}
+  - {name: glaive_tools, max_samples: 8000}
+  - {name: wildjailbreak, max_samples: 20000}   # gated; needs HF_TOKEN. Intern's test is the separate eval.tsv
+  - {name: jailbreak_classification}
+  - {name: toxic_chat}
+  # breadth: intent, NLI, reading, knowledge, commonsense, sentiment, agents
+  - {name: banking77}
+  - {name: clinc150, max_samples: 8000}
+  - {name: boolq}
+  - {name: mnli, max_samples: 10000}
+  - {name: anli, max_samples: 10000}
+  - {name: arc}
+  - {name: openbookqa}
+  - {name: csqa}
+  - {name: mmlu_aux, max_samples: 10000}
+  - {name: hellaswag, max_samples: 8000}
+  - {name: winogrande, max_samples: 8000}
+  - {name: sst5}
+  - {name: yelp, max_samples: 6000}
+  - {name: gsm8k_mc}
+  - {name: sms_spam}
+  # Jev-format typed decisions (NanoJev partly Jev-distilled)
+  - {name: kev_suites}
+  - {name: jebadiah_synth}
+  - {name: mojev_mix}
+  - {name: nanojev}
+  # multimodal: OneJev (images, screenshots, video frames; also text-only rows) + 10k image MCQ
+  - {name: onejev}
+  - {name: scienceqa_img, max_samples: 1562}
+  - {name: cauldron_iconqa, max_samples: 4125}
+  - {name: cauldron_aokvqa, max_samples: 2081}
+  - {name: cauldron_scienceqa, max_samples: 1250}
+  - {name: cauldron_ai2d, max_samples: 609}
+  - {name: cauldron_tqa, max_samples: 373}
+  # GUI element choice on Set-of-Mark screenshots (+ action type for GUIAct)
+  - {name: mm_mind2web, max_samples: 5000}
+  - {name: guiact_web_single, max_samples: 3500}
+  - {name: guiact_web_multi, max_samples: 3500}
+  - {name: guiact_smartphone, max_samples: 3500}
+  - {name: omniact, max_samples: 3500}
+  - {name: weblinx, max_samples: 3000}         # cc-by-nc-sa: non-commercial
+  # GUI next-step choice + action type on AGUVIS trajectories
+  - {name: aguvis_aitw, max_samples: 2500}
+  - {name: aguvis_coat, max_samples: 2000}
+  - {name: aguvis_miniwob, max_samples: 1500}
+  - {name: aguvis_guide, max_samples: 2500}
+  - {name: aguvis_android_control, max_samples: 3500}
+  - {name: aguvis_amex, max_samples: 3000}
+  - {name: aguvis_gui_odyssey, max_samples: 3000}
+
+augment:
+  p_none: 0.05
+  p_distract: 0.1
+  p_pack: 0.15      # merge short single-question records into multi-question states
+  pack_max: 4
+
+epochs: 2
+lr: 5.0e-6
+weight_decay: 0.01
+warmup_ratio: 0.03
+batch_size: 16
+grad_accum: 4
+max_state_tokens: 3072
+max_length: 6144
+num_workers: 8    # image decoding + processor run in the loader (~0.1 s per OneJev record)
+holdout: 0.02
+eval_dataset: [intern-accuracy-v1, gui-v1]
+save_steps: 1000
+report_to: wandb

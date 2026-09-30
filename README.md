@@ -64,7 +64,7 @@ everything into `$JEVTRAINER_CACHE`. Datasets marked `eval_only` can never enter
 and training records whose state (or any long text field of it) matches an evaluation record are
 dropped automatically; `--dry-run` reports how many.
 
-Built in (116 datasets, `jt data list`):
+Built in (136 datasets, `jt data list`):
 
 * typed-decision sets: typed_decisions, kev_suites, jebadiah_synth, mojev_mix, onejev (multimodal),
   pngwn_typed_v2 / pngwn_system_one (non-commercial); eval-only this_that_complex / this_that_spatial
@@ -80,6 +80,12 @@ Built in (116 datasets, `jt data list`):
   truthfulqa, pubmedqa, bbh, musr, cladder, cruxeval
 * commonsense / math: hellaswag, winogrande, gsm8k_mc
 * tools / agents: toolace, glaive_tools, hermes_tools, mind2web; eval-only when2call
+* GUI / browser / computer use (screenshots, `data/converters/gui.py`): element choice on numbered
+  candidate boxes drawn on the screenshot for mm_mind2web (splits test_task / test_website /
+  test_domain), guiact_web_single / guiact_web_multi / guiact_smartphone (also action type), omniact,
+  weblinx (non-commercial); next-step choice and action type on AGUVIS trajectories for aguvis_aitw,
+  aguvis_android_control, aguvis_amex, aguvis_guide, aguvis_coat, aguvis_miniwob, aguvis_gui_odyssey.
+  Screenshots are cached as JPG with the long side at most 1280 px
 * legal / RAG / retrieval: unfair_tos, case_hold, ragtruth, esci
 * preference: helpsteer2 (five rubric scores), ultrafeedback, shp, hh_rlhf
 * support / misc: support_tickets, liar2, bias_in_bios, cola, subjectivity
@@ -89,8 +95,10 @@ Built in (116 datasets, `jt data list`):
 
 `jt bench list`. Suites: `intern-accuracy-v1` (JevBench easy/original/hard, typed decision,
 ToolACE, AG News, WildJailbreak; fetched by `jt data fetch intern`), `intern-calibration`
-(known-distribution pilot, scored by TVD), `core` (16 public benchmarks), `extended` (25 more:
-BBH, MuSR, CLadder, CRUXEval, TruthfulQA, ContractNLI, ESCI, When2Call, RAGTruth, ...), `vision`.
+(known-distribution pilot, scored by TVD), `core` (16 public benchmarks), `extended` (31 more:
+BBH, MuSR, CLadder, CRUXEval, TruthfulQA, ContractNLI, ESCI, When2Call, RAGTruth, ...), `vision`,
+`gui-v1` (held-out GUI splits: Multimodal-Mind2Web test task / website / domain, GUIAct web-single /
+web-multi / smartphone test, OmniACT test, WebLINX valid; 1,000 each).
 
 Sources that need extra handling live in `data/converters/recovered.py`: GPQA and HLE (gated: accept
 the terms on the Hub and set `HF_TOKEN`; HLE keeps its text-only multiple-choice items), BFCL (JSON
