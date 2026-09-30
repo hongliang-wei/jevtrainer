@@ -92,9 +92,12 @@ ToolACE, AG News, WildJailbreak; fetched by `jt data fetch intern`), `intern-cal
 (known-distribution pilot, scored by TVD), `core` (16 public benchmarks), `extended` (25 more:
 BBH, MuSR, CLadder, CRUXEval, TruthfulQA, ContractNLI, ESCI, When2Call, RAGTruth, ...), `vision`.
 
-Not included: GPQA and HLE (gated per user; accept their terms and add `HF_TOKEN`), BFCL (raw
-evaluation files, no row format), NanoJev-Data and system-one-mini-data (states without question
-text), HoVer (claims without the evidence paragraphs). Every result
+Sources that need extra handling live in `data/converters/recovered.py`: GPQA and HLE (gated: accept
+the terms on the Hub and set `HF_TOKEN`; HLE keeps its text-only multiple-choice items), BFCL (JSON
+Lines under a `.json` name with per-category columns, joined with `possible_answer/`; one noul per
+function), system-one-mini (question texts taken from its generator's `SCHEMA`), NanoJev
+(`unified/hard/`; about 10% of its labels come from the hosted Jev and are flagged `jev_distilled`),
+HoVer (evidence text from `Dzeniks/hover`, labels from the original release). Every result
 reports accuracy, chance-corrected skill, ECE (10 bins, max-probability confidence), multiclass
 Brier and NLL, plus macro-F1 or case-exact where the benchmark defines it.
 
