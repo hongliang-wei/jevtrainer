@@ -64,17 +64,37 @@ everything into `$JEVTRAINER_CACHE`. Datasets marked `eval_only` can never enter
 and training records whose state (or any long text field of it) matches an evaluation record are
 dropped automatically; `--dry-run` reports how many.
 
-Built in: intent (banking77, clinc150), topic (agnews), sentiment (sst5, yelp), spam, NLI (mnli,
-anli, snli), reading (boolq), knowledge (arc, openbookqa, csqa, mmlu_aux; mmlu, mmlu_pro eval-only),
-commonsense (hellaswag, winogrande), math (gsm8k_mc), typed workflows (typed_decisions), tools
-(toolace, glaive_tools), safety (jailbreak_classification, toxic_chat, wildjailbreak if you have
-access), agents (mind2web), vision (scienceqa_img, cauldron_ai2d/aokvqa/scienceqa/iconqa/tqa).
+Built in (116 datasets, `jt data list`):
+
+* typed-decision sets: typed_decisions, kev_suites, jebadiah_synth, mojev_mix, onejev (multimodal),
+  pngwn_typed_v2 / pngwn_system_one (non-commercial); eval-only this_that_complex / this_that_spatial
+* intent: banking77, clinc150, massive_intent, massive_scenario, bitext_support, trec
+* topic: agnews, dbpedia14, yahoo_topics, newsgroups20
+* sentiment / emotion: sst2, sst5, imdb, amazon_polarity, amazon_stars, rotten_tomatoes, yelp, emotion,
+  go_emotions, tweet_sentiment, tweet_emotion, tweet_irony, fin_tweets, fin_phrasebank
+* safety: wildjailbreak (gated, needs HF_TOKEN), jailbreak_classification, toxic_chat, civil_comments,
+  tweet_offensive, tweet_hate, hate_offensive; spam: sms_spam, enron_spam
+* NLI / similarity: mnli, anli, snli, qnli, rte, cb, scitail, contract_nli, mrpc, qqp, paws, wic, stsb
+* reading / QA: boolq, multirc, race, wiki_qa, strategyqa, social_iqa, piqa, copa, logiqa
+* knowledge: arc, openbookqa, csqa, qasc, sciq, mmlu_aux, medmcqa, medqa; eval-only mmlu, mmlu_pro,
+  truthfulqa, pubmedqa, bbh, musr, cladder, cruxeval
+* commonsense / math: hellaswag, winogrande, gsm8k_mc
+* tools / agents: toolace, glaive_tools, hermes_tools, mind2web; eval-only when2call
+* legal / RAG / retrieval: unfair_tos, case_hold, ragtruth, esci
+* preference: helpsteer2 (five rubric scores), ultrafeedback, shp, hh_rlhf
+* support / misc: support_tickets, liar2, bias_in_bios, cola, subjectivity
+* vision: scienceqa_img, cauldron_ai2d / aokvqa / scienceqa / iconqa / tqa, onejev
 
 ## Benchmarks
 
 `jt bench list`. Suites: `intern-accuracy-v1` (JevBench easy/original/hard, typed decision,
 ToolACE, AG News, WildJailbreak; fetched by `jt data fetch intern`), `intern-calibration`
-(known-distribution pilot, scored by TVD), `core` (16 public benchmarks), `vision`. Every result
+(known-distribution pilot, scored by TVD), `core` (16 public benchmarks), `extended` (25 more:
+BBH, MuSR, CLadder, CRUXEval, TruthfulQA, ContractNLI, ESCI, When2Call, RAGTruth, ...), `vision`.
+
+Not included: GPQA and HLE (gated per user; accept their terms and add `HF_TOKEN`), BFCL (raw
+evaluation files, no row format), NanoJev-Data and system-one-mini-data (states without question
+text), HoVer (claims without the evidence paragraphs). Every result
 reports accuracy, chance-corrected skill, ECE (10 bins, max-probability confidence), multiclass
 Brier and NLL, plus macro-F1 or case-exact where the benchmark defines it.
 
