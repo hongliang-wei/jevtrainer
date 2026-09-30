@@ -37,6 +37,15 @@ def _dl(repo, path):
     return hf_hub_download(repo, path, repo_type="dataset")
 
 
+def _threaded(fn, items, chunk=64, workers=16):
+    """(item, fn(item)) in order; fn runs concurrently a chunk at a time (for many small downloads)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(workers) as ex:
+        for i in range(0, len(items), chunk):
+            yield from zip(items[i:i + chunk], ex.map(fn, items[i:i + chunk]))
+
+
 def save_image(img, name: str, key: str) -> str:
     d = cache_dir() / "images" / name
     d.mkdir(parents=True, exist_ok=True)
@@ -302,12 +311,11 @@ def _aguvis(json_name: str, images: str, name: str, max_rows: int | None = None)
         vocab = {t: AGUVIS_ACTIONS[t] for t, c in types.items() if c >= 20}
         opener = _image_opener(images)
         rng.shuffle(parsed)
+        parsed = [x for x in parsed if x[1]["type"] in vocab]
         n = 0
-        for img_name, p in parsed:
+        for (img_name, p), img in _threaded(lambda x: opener(x[0]), parsed):
             if n >= min(cap, max_rows or cap):
                 return
-            if p["type"] not in vocab:
-                continue
             later = [q["step"] for q in by_episode[_EPISODE.sub("", img_name)] if len(q["prev"]) > len(p["prev"])]
             later = [s for s in dict.fromkeys(later) if not _similar(s, p["step"])]
             opts = [p["step"]] + rng.sample(later, min(len(later), 2))
@@ -317,7 +325,6 @@ def _aguvis(json_name: str, images: str, name: str, max_rows: int | None = None)
                 if not any(_similar(s, o) for o in opts):
                     opts.append(s)
             rng.shuffle(opts)
-            img = opener(img_name)
             if img is None:
                 continue
             key = rid(name, img_name)
@@ -428,10 +435,8 @@ def weblinx(split, cap, rng):
     rows = [json.loads(l) for l in gzip.open(_dl("McGill-NLP/WebLINX", f"data/chat/{split}.json.gz"), "rt", encoding="utf-8")]
     rows = [r for r in rows if re.search(r'uid="([\w-]+)"', r["action"])]
     rng.shuffle(rows)
-    replays, n = {}, 0
+    items = []
     for r in rows:
-        if n >= cap:
-            return
         uid = re.search(r'uid="([\w-]+)"', r["action"]).group(1)
         cands = []
         for line in r["candidates"].split("\n"):
@@ -441,17 +446,29 @@ def weblinx(split, cap, rng):
                 desc = f"{m.group(2)} {t.group(1).strip()[:60]}" if t else m.group(2)
                 cands.append((m.group(1), tuple(map(float, m.group(3, 4, 5, 6))), desc))
         gold = next((c for c in cands if c[0] == uid), None)
-        if gold is None:
-            continue
+        if gold is not None:
+            items.append((r, cands, gold))
+    replays = {}
+
+    def fetch(item):
+        r = item[0]
         try:
             if r["demo"] not in replays:
                 replays[r["demo"]] = json.load(open(_dl("McGill-NLP/WebLINX-full", f"demonstrations/{r['demo']}/replay.json"), encoding="utf-8"))["data"]
             turn = replays[r["demo"]][r["turn"]]
             shot = turn["state"]["screenshot"]
             img = Image.open(_dl("McGill-NLP/WebLINX-full", f"demonstrations/{r['demo']}/screenshots/{shot}"))
-            vw = turn["action"]["arguments"]["metadata"]["viewportWidth"]
+            return img, turn["action"]["arguments"]["metadata"]["viewportWidth"]
         except (OSError, KeyError, IndexError, TypeError, ValueError):
+            return None
+
+    n = 0
+    for (r, cands, gold), got in _threaded(fetch, items):
+        if n >= cap:
+            return
+        if got is None:
             continue
+        img, vw = got
         s = img.width / vw
         scaled = [((b[0] * s, b[1] * s, b[2] * s, b[3] * s), d) for _, b, d in cands]
         keep = [c for c in scaled if c[0][0] >= 0 and c[0][1] >= 0 and c[0][0] + c[0][2] <= img.width and c[0][1] + c[0][3] <= img.height]
