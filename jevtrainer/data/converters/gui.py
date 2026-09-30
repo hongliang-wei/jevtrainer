@@ -226,8 +226,11 @@ def _guiact_record(d, row, vocab, rng, platform, Image):
         return None
     img = Image.open(io.BytesIO(base64.b64decode(row["base64"])))
     sx, sy = img.width / d["image_size"]["width"], img.height / d["image_size"]["height"]
-    elems = [((e["position"]["x"] * sx, e["position"]["y"] * sy, e["position"]["width"] * sx, e["position"]["height"] * sy),
-              " ".join(x for x in (e.get("ui_type"), (e.get("text") or "")[:60]) if x) or "element", e["id"]) for e in row["elements"] or []]
+    elems = []
+    for e in row["elements"] or []:
+        p = e.get("position") or e.get("rect")  # smartphone: position/id, web: rect/uid
+        desc = " ".join(x for x in (e.get("ui_type"), (e.get("text") or "").strip()[:60]) if x) or "element"
+        elems.append(((p["x"] * sx, p["y"] * sy, p["width"] * sx, p["height"] * sy), desc, e.get("id", e.get("uid"))))
     state = {"task": d["question"], "previous_actions": d["actions_history"] or "none"}
     key = rid("guiact", platform, d["uid"])
     tq = type_question(vocab, a["name"])
@@ -362,14 +365,24 @@ def omniact(split, cap, rng):
 
     repo = "Writer/omniact"
     z = zipfile.ZipFile(_dl(repo, "data.zip"))
-    names = set(z.namelist())
+    by_screen = {}  # index paths say screen_1.png / screen_1.json; web files are screen1.png / screen1_boxes.json
+    for f in z.namelist():
+        m = re.match(r"(.+)/screen_?(\d+)(?:_boxes)?\.(png|json)$", f)
+        if m:
+            by_screen[(m.group(1), m.group(2), m.group(3))] = f
+
+    def resolve(p):
+        m = re.match(r"(.+)/screen_?(\d+)(?:_boxes)?\.(png|json)$", p)
+        return by_screen.get(m.groups()) if m else None
+
     file = "val.json" if split == "validation" else f"{split}.json"
     index = json.load(open(_dl(repo, file), encoding="utf-8"))
+    names = set(z.namelist())
     n = 0
     for k, e in index.items():
         if n >= cap:
             return
-        paths = {f: f"data/{e[f]}" if not e[f].startswith("data/") else e[f] for f in ("task", "image", "box")}
+        paths = {"task": e["task"], "image": resolve(e["image"]), "box": resolve(e["box"])}
         if not all(p in names for p in paths.values()):
             continue
         text = z.read(paths["task"]).decode("utf-8", "ignore")
