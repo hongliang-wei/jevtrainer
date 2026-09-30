@@ -19,7 +19,7 @@ class MyReadout(Readout):
         rows = []
         for name, q in record.questions.items():
             text = f"{self.truncate_state(record)}<ask>{self.clean(q.instructions)}"
-            row = self.tokenize(text, record_images(record) if record.images else None)
+            row = self.tokenize(text, self.images(record))
             row.reads.append(Read(0, name, {"pos": self.positions(row.input_ids, "<ask>")[0]}))
             rows.append(row)
         return rows
@@ -34,7 +34,8 @@ What the base class does for you:
   table; `embed()` swaps it in at those positions, so the model's vocabulary is never resized and the
   tokens train under LoRA too.
 * `tokenize(text, images)` uses the processor when there are images (Qwen-VL M-RoPE positions are
-  handled by the family) and the tokenizer otherwise.
+  handled by the family) and the tokenizer otherwise. `images(record)` loads the record's images and,
+  with the `image_pixel_budget` readout option, shrinks them so their total area fits the budget.
 * `collate()` pads rows and concatenates pixel values; `hidden()` runs the backbone with
   `inputs_embeds` and returns the last hidden states. Override `forward()` only if you need the
   full LM output.

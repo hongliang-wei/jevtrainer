@@ -13,7 +13,7 @@ import random
 import torch
 from torch import nn
 
-from jevtrainer.readouts.base import NEUTRAL_KEY, Read, Readout, record_images
+from jevtrainer.readouts.base import NEUTRAL_KEY, Read, Readout
 from jevtrainer.registry import READOUTS
 from jevtrainer.schema import Record
 
@@ -42,7 +42,7 @@ class SlotReadout(Readout):
         return slots
 
     def encode(self, record: Record, rng=None):
-        images = record_images(record) if record.images else None
+        images = self.images(record)
         state = self.truncate_state(record)
         rows = []
         for name, q in record.questions.items():

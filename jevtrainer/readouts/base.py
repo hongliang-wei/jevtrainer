@@ -115,6 +115,10 @@ class Readout(nn.Module):
             return row
         return Row(self.tok(text, add_special_tokens=add_special_tokens).input_ids, [])
 
+    def images(self, record: Record) -> list | None:
+        """Loaded images, within the `image_pixel_budget` option (total pixels per record)."""
+        return record_images(record, self.cfg.options.get("image_pixel_budget")) if record.images else None
+
     def positions(self, ids: list[int], token: str) -> list[int]:
         tid = self.special_ids[token]
         return [i for i, t in enumerate(ids) if t == tid]
@@ -187,9 +191,17 @@ def load_image(ref: str, root: str | None = None):
     return Image.open(p).convert("RGB")
 
 
-def record_images(record: Record) -> list:
+def record_images(record: Record, pixel_budget: int | None = None) -> list:
+    """The record's images; if their total area exceeds pixel_budget, all are shrunk by the same factor."""
+    from PIL import Image
+
     root = record.meta.get("image_root")
-    return [load_image(ref, root) for ref in record.images]
+    images = [load_image(ref, root) for ref in record.images]
+    total = sum(im.width * im.height for im in images)
+    if pixel_budget and total > pixel_budget:
+        s = (pixel_budget / total) ** 0.5
+        images = [im.resize((max(1, round(im.width * s)), max(1, round(im.height * s))), Image.BICUBIC) for im in images]
+    return images
 
 
 NEUTRAL_KEY = re.compile(r"(opt|option|element|choice)_\d+")

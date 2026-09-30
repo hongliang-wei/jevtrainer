@@ -13,7 +13,7 @@ import math
 import torch
 from torch import nn
 
-from jevtrainer.readouts.base import Read, Readout, option_text, record_images
+from jevtrainer.readouts.base import Read, Readout, option_text
 from jevtrainer.registry import READOUTS
 from jevtrainer.schema import Record
 
@@ -31,7 +31,7 @@ class PointerReadout(Readout):
             self.scale = 1 / math.sqrt(dp)
 
     def encode(self, record: Record, rng=None):
-        images = record_images(record) if record.images else None
+        images = self.images(record)
         prefix = self.tok.bos_token or ""
         if images:
             prefix += self.family.image_placeholder(self.processor) * len(images)

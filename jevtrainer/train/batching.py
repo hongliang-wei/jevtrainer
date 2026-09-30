@@ -70,11 +70,19 @@ def _target(r: Record, name: str) -> dict:
     }
 
 
+IMAGE_CHARS = 1000  # rough text-equivalent of one image; many small frames count as at most 8
+
+
+def approx_length(r: Record) -> int:
+    text = len(r.state_text()) + sum(len(q.instructions) + sum(map(len, q.descriptions())) for q in r.questions.values())
+    return text + IMAGE_CHARS * min(len(r.images), 8)
+
+
 class LengthGroupedBatches:
     """Shuffled batches of records with similar length (less padding). Re-shuffles every epoch."""
 
     def __init__(self, records: list[Record], batch_size: int, seed: int = 0, mega: int = 64):
-        self.lengths = [len(r.state_text()) + sum(len(q.instructions) + sum(map(len, q.descriptions())) for q in r.questions.values()) for r in records]
+        self.lengths = [approx_length(r) for r in records]
         self.batch_size, self.mega, self.rng = batch_size, mega, random.Random(seed)
 
     def __iter__(self):

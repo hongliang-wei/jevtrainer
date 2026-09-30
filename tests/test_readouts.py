@@ -66,6 +66,14 @@ def test_image_record(tiny_vl, image_record, readout):
     assert z[0].numel() == 3 and torch.isfinite(z[0]).all()
 
 
+def test_image_pixel_budget(image_record):
+    from jevtrainer.readouts.base import record_images
+
+    image_record.images = image_record.images * 4
+    assert [im.size for im in record_images(image_record)] == [(64, 64)] * 4
+    assert [im.size for im in record_images(image_record, 64 * 64)] == [(32, 32)] * 4
+
+
 def test_text_only_model(tiny_text, record):
     for readout in READOUTS:
         b = build(tiny_text, readout, dtype="fp32")

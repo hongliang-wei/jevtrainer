@@ -1,0 +1,73 @@
+# v3 = v2 + Jev-format typed sets (Kev suites, Jebadiah, MoJev, NanoJev) + multimodal: all of OneJev
+# and 10k image questions sampled from ScienceQA-img and five Cauldron subsets (proportional to size).
+# Run directly after v1 (v2 skipped). Images share a per-record pixel budget (~2560 vision tokens),
+# so 4-screenshot trajectories and 32-frame videos fit in max_length.
+# Reproduce Intern-Decision-0.8B with open data: marker readout, full fine-tuning of Qwen3.5-0.8B,
+# full-vocabulary cross-entropy at the placeholder positions (Intern's recipe), 2 epochs.
+# Evaluated on Intern's own accuracy-v1 bundle; its test states are removed from training.
+model: Qwen/Qwen3.5-0.8B
+readout: marker
+readout_options:
+  full_vocab_loss: true
+  image_pixel_budget: 2621440   # 2560 x 32 x 32: total pixels over a record's images
+finetune: full
+output_dir: runs/repro/intern_0.8b_v3
+
+dataset:
+  # same decision types as the test suites (different rows)
+  - {name: typed_decisions, weight: 3}     # 1,200 states x 5 questions, teacher probabilities
+  - {name: agnews, max_samples: 20000}
+  - {name: toolace, max_samples: 10000}
+  - {name: glaive_tools, max_samples: 8000}
+  - {name: wildjailbreak, max_samples: 20000}   # gated; needs HF_TOKEN. Intern's test is the separate eval.tsv
+  - {name: jailbreak_classification}
+  - {name: toxic_chat}
+  # breadth: intent, NLI, reading, knowledge, commonsense, sentiment, agents
+  - {name: banking77}
+  - {name: clinc150, max_samples: 8000}
+  - {name: boolq}
+  - {name: mnli, max_samples: 10000}
+  - {name: anli, max_samples: 10000}
+  - {name: arc}
+  - {name: openbookqa}
+  - {name: csqa}
+  - {name: mmlu_aux, max_samples: 10000}
+  - {name: hellaswag, max_samples: 8000}
+  - {name: winogrande, max_samples: 8000}
+  - {name: sst5}
+  - {name: yelp, max_samples: 6000}
+  - {name: gsm8k_mc}
+  - {name: sms_spam}
+  # Jev-format typed decisions (NanoJev partly Jev-distilled)
+  - {name: kev_suites}
+  - {name: jebadiah_synth}
+  - {name: mojev_mix}
+  - {name: nanojev}
+  # multimodal: OneJev (images, screenshots, video frames; also text-only rows) + 10k image MCQ
+  - {name: onejev}
+  - {name: scienceqa_img, max_samples: 1562}
+  - {name: cauldron_iconqa, max_samples: 4125}
+  - {name: cauldron_aokvqa, max_samples: 2081}
+  - {name: cauldron_scienceqa, max_samples: 1250}
+  - {name: cauldron_ai2d, max_samples: 609}
+  - {name: cauldron_tqa, max_samples: 373}
+
+augment:
+  p_none: 0.05
+  p_distract: 0.1
+  p_pack: 0.15      # merge short single-question records into multi-question states
+  pack_max: 4
+
+epochs: 2
+lr: 5.0e-6
+weight_decay: 0.01
+warmup_ratio: 0.03
+batch_size: 16
+grad_accum: 4
+max_state_tokens: 3072
+max_length: 6144
+num_workers: 8    # image decoding + processor run in the loader (~0.1 s per OneJev record)
+holdout: 0.02
+eval_dataset: intern-accuracy-v1
+save_steps: 1000
+report_to: wandb

@@ -11,7 +11,7 @@ import string
 
 import torch
 
-from jevtrainer.readouts.base import Read, Readout, option_text, record_images
+from jevtrainer.readouts.base import Read, Readout, option_text
 from jevtrainer.registry import READOUTS
 from jevtrainer.schema import Record
 
@@ -60,7 +60,7 @@ class MarkerReadout(Readout):
         for name, q in record.questions.items():
             if len(q.labels()) > self.max_options:
                 raise ValueError(f"{record.id}/{name}: marker supports at most {self.max_options} options")
-        images = record_images(record) if record.images else None
+        images = self.images(record)
         text = self.family.chat_text(self.tok, self.processor, self.messages(record, len(images or [])), False)
         row = self.tokenize(text, images)
         pos = self.positions(row.input_ids, "<decision>")
