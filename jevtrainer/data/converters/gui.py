@@ -231,9 +231,10 @@ def _acts(d):
 
 
 def _guiact_record(d, row, vocab, rng, platform, Image):
-    a = _acts(d)[0]
-    if a["name"] not in vocab:
+    acts = _acts(d)
+    if not acts or acts[0]["name"] not in vocab:
         return None
+    a = acts[0]
     img = Image.open(io.BytesIO(base64.b64decode(row["base64"])))
     sx, sy = img.width / d["image_size"]["width"], img.height / d["image_size"]["height"]
     elems = []
