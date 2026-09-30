@@ -134,7 +134,7 @@ def mm_mind2web(split, cap, rng):
     repo = "osunlp/Multimodal-Mind2Web"
     shards = sorted(f for f in HfApi().list_repo_files(repo, repo_type="dataset") if f.startswith(f"data/{split}-"))
     rng.shuffle(shards)
-    cols = ["operation", "pos_candidates", "neg_candidates", "website", "domain", "annotation_id", "confirmed_task",
+    cols = ["operation", "pos_candidates", "neg_candidates", "website", "domain", "annotation_id", "action_uid", "confirmed_task",
             "screenshot", "action_reprs", "target_action_index"]
     n = 0
     for shard in shards:
@@ -180,7 +180,18 @@ def _m2w_record(r, rng, Image):
              "previous_actions": r["action_reprs"][:idx][-5:] or "none",
              "next_operation": op["op"] + (f" {op['value']!r}" if op.get("value") else "")}
     gold = ((gold_box[0], gold_box[1] - top, gold_box[2], gold_box[3]), _elem(pos[0]))
-    return element_record(rid("mm_m2w", r["annotation_id"], idx), state, img, gold, others, rng, "mm_mind2web")
+    return element_record(rid("mm_m2w", r["annotation_id"], idx), state, img, gold, others, rng, "mm_mind2web",
+                          annotation_id=r["annotation_id"], action_uid=r["action_uid"])
+
+
+def mm_mind2web_nojev(split, cap, rng):
+    """mm_mind2web train steps that OneJev does not already contain (its ids: multimodal_mind2web/<annotation_id>/<action_uid>/...)."""
+    from jevtrainer.data.base import load
+
+    seen = {tuple(r.id.split("/")[1:3]) for r in load("onejev", "train") if r.id.startswith("multimodal_mind2web/")}
+    for r in load("mm_mind2web", "train", cap=cap):
+        if (r.meta.get("annotation_id"), r.meta.get("action_uid")) not in seen:
+            yield r
 
 
 # ---- GUIAct (web-single, web-multi, smartphone) ----------------------------------
@@ -497,7 +508,9 @@ register(DatasetSpec("omniact", omniact, ("train", "validation", "test"), "Write
 register(DatasetSpec("weblinx", weblinx, ("train", "valid"), "McGill-NLP/WebLINX(+full screenshots)", "cc-by-nc-sa-4.0", "agents",
                      multimodal=True, tags=["non-commercial"], description="conversational web navigation -> marked target element"))
 register(DatasetSpec("mm_mind2web", mm_mind2web, tuple(M2W_SPLITS), "osunlp/Multimodal-Mind2Web", "openrail", "agents", multimodal=True,
-                     description="web next-element choice on marked screenshots (Set-of-Mark)"))
+                     description="web next-element choice on marked screenshots (Set-of-Mark)", version="2"))
+register(DatasetSpec("mm_mind2web_nojev", mm_mind2web_nojev, ("train",), "osunlp/Multimodal-Mind2Web minus OneJev's steps", "openrail", "agents",
+                     multimodal=True, description="mm_mind2web:train without the (annotation_id, action_uid) steps in onejev"))
 for _p in ("web-single", "web-multi", "smartphone"):
     register(DatasetSpec(f"guiact_{_p.replace('-', '_')}", _guiact(_p), ("train", "test"), f"yiye2023/GUIAct:{_p}", "apache-2.0", "agents",
                          multimodal=True, description="GUIAct: action type + marked target element"))
