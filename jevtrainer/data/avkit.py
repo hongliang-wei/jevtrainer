@@ -331,7 +331,8 @@ def parquet_audio(repo: str, rows: list[dict], name: str, key_of, audio_col: str
                         out[pos] = m
                     offset += len(col)
         finally:
-            src.unlink(missing_ok=True)
+            if not os.environ.get("JEVTRAINER_KEEP_RAW"):  # set it while several splits share the same shards
+                src.unlink(missing_ok=True)
 
     with ThreadPoolExecutor(max(1, min(shards, 4))) as ex:
         list(ex.map(shard, by_file.items()))

@@ -25,7 +25,7 @@ def esc50(split, cap, rng):
     return avkit.clip_choice(
         "esc50", split, cap, rng, repo, files, ["filename", "fold", "category"],
         label_of=lambda r: avkit.humanize(r["category"]), question=Q_SOUND, key_of=lambda r: r["filename"], keep=want,
-        meta_of=lambda r: {"label": r["category"], "fold": r["fold"]},
+        meta_of=lambda r: {"source_label": r["category"], "fold": r["fold"]},
     )
 
 
@@ -37,7 +37,7 @@ def urbansound8k(split, cap, rng):
     return avkit.clip_choice(
         "urbansound8k", split, cap, rng, repo, files, ["slice_file_name", "fold", "class"],
         label_of=lambda r: avkit.humanize(r["class"]), question="Which urban sound can be heard in this audio clip?",
-        key_of=lambda r: r["slice_file_name"], keep=want, meta_of=lambda r: {"label": r["class"], "fold": r["fold"]},
+        key_of=lambda r: r["slice_file_name"], keep=want, meta_of=lambda r: {"source_label": r["class"], "fold": r["fold"]},
     )
 
 
@@ -70,8 +70,8 @@ def fsd50k(split, cap, rng):
             continue
         gold = avkit.humanize(r["labels"][0])
         pool = [avkit.humanize(x) for x in leaves if x not in r["labels"]]
-        rec = avkit.audio_mcq(avkit.rid_("fsd50k", split, r["fname"]), m, Q_SOUND, gold, pool, rng, label=r["labels"][0],
-                              all_labels=r["labels"])
+        rec = avkit.audio_mcq(avkit.rid_("fsd50k", split, r["fname"]), m, Q_SOUND, gold, pool, rng, source_label=r["labels"][0],
+                              labels=r["labels"])
         if rec:
             yield rec
 
@@ -106,8 +106,8 @@ def audioset(split, cap, rng):
         if not m:
             continue
         pool = [x for x in pool_all if x not in r["human_labels"]]
-        rec = avkit.audio_mcq(avkit.rid_("audioset", split, r["video_id"]), m, Q_SOUND, r["gold"], pool, rng, label=r["gold"],
-                              all_labels=r["human_labels"])
+        rec = avkit.audio_mcq(avkit.rid_("audioset", split, r["video_id"]), m, Q_SOUND, r["gold"], pool, rng, source_label=r["gold"],
+                              labels=r["human_labels"])
         if rec:
             yield rec
 
