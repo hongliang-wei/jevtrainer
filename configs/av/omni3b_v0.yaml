@@ -13,7 +13,6 @@ output_dir: runs/av/omni3b_v0
 
 dataset:
   - {name: avqa}
-  - {name: music_avqa}
   - {name: boolq, max_samples: 1500}
   - {name: mnli, max_samples: 1500}
   - {name: agnews, max_samples: 1500}
