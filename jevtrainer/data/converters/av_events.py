@@ -26,10 +26,12 @@ import os
 import re
 
 from jevtrainer.data import avkit
-from jevtrainer.data.avkit_video import balanced_take, convert_zip_videos, hash_bucket
+from jevtrainer.data.avkit_video import (balanced_take, cached_item, convert_parquet_videos, convert_zip_videos, fetch_ranged,
+                                         hash_bucket)
 from jevtrainer.data.base import DatasetSpec, choice_record, hf_file, hf_listing, mcq_record, noul_record, register, rid
 
-_WORKERS = int(os.environ.get("JEVTRAINER_AV_WORKERS", "8"))
+_WORKERS = int(os.environ.get("JEVTRAINER_AV_WORKERS", "8"))  # parallel ffmpeg jobs
+_CONNS = int(os.environ.get("JEVTRAINER_AV_CONNS", "4"))  # parallel range requests per big file
 
 
 # ---- VGGSound ------------------------------------------------------------------------------------------
@@ -61,22 +63,37 @@ def _similar_classes(classes: list[str]) -> dict[str, list[str]]:
     return sim
 
 
+def _vgg_convert(ids: set[str]) -> None:
+    """Shard by shard: ranged download of a ~1 GB parquet (video + sound bytes), convert every clip, delete the shard."""
+    repo = "11hu83/vggsound"
+    limit = int(os.environ.get("JEVTRAINER_VGG_SHARDS", "31"))
+    marks = avkit.media_dir("vggsound", "_shards")
+    for i in range(min(limit, 31)):
+        fn = f"data/vggsound_test_{i:04d}.parquet"
+        if (marks / f"{i:04d}.done").exists():
+            continue
+        path = fetch_ranged(repo, fn, "vggsound", conns=_CONNS)
+        if path is None:
+            continue
+        n = convert_parquet_videos(path, "vggsound", "video_id", "video", {v: v for v in ids}, _WORKERS, frames=8)
+        path.unlink(missing_ok=True)
+        (marks / f"{i:04d}.done").write_text(str(n))
+        print(f"[vggsound] shard {i}: {n} new clips", flush=True)
+
+
 def vggsound(split, cap, rng):
     repo = "11hu83/vggsound"
-    rows = []
+    meta = []
     with open(hf_file(repo, "metadata.csv"), encoding="utf8") as f:  # one row per clip file of the repo
         for r in csv.DictReader(f):
-            vid = r["file_name"].split("/")[1]
-            if (hash_bucket("vggsound", vid) < 10) == (split == "test"):
-                rows.append((vid, r["text"].strip(), r["file_name"]))
-    classes = sorted({c for _, c, _ in rows})
+            meta.append((r["file_name"].split("/")[1], r["text"].strip()))
+    _vgg_convert({v for v, _ in meta})  # both splits at once, so the second split needs no download
+    rows = [(vid, c) for vid, c in meta if (hash_bucket("vggsound", vid) < 10) == (split == "test") and cached_item("vggsound", vid)]
+    classes = sorted({c for _, c in meta})
     sim = _similar_classes(classes)
     rows = balanced_take(rows, lambda r: r[1], cap, rng)
-    items = avkit.convert_videos(repo, "vggsound", {vid: fn for vid, _, fn in rows}, _WORKERS)
-    for vid, label, _ in rows:
-        media = items.get(vid)
-        if not media:
-            continue
+    for vid, label in rows:
+        media = cached_item("vggsound", vid)
         hard = rng.sample(sim[label], min(2, len(sim[label])))
         rest = [c for c in classes if c != label and c not in hard]
         options = [label, *hard, *rng.sample(rest, 3 - len(hard))]
@@ -156,14 +173,21 @@ def _ave_rows(split: str) -> list[dict]:
 
 
 def _ave_clips(split: str, cap: int, rng) -> tuple[list[dict], dict[str, dict]]:
+    allrows = [r for s in ("train", "val", "test") for r in _ave_rows(s)]  # one pass over the archive serves every split
+    mark = avkit.media_dir("ave", "_done") / "ok"
+    if not mark.exists():
+        archive = fetch_ranged("UnFaZeD07/AVE-Dataset", "videos.zip", "ave", conns=_CONNS)
+        if archive is None:
+            raise RuntimeError("cannot download AVE videos.zip")
+        wanted = {f"videos/{r['vid']}.mp4": (r["vid"], {"start": r["t0"], "end": r["t1"]}) for r in allrows}
+        convert_zip_videos(archive, "ave", wanted, _WORKERS, frames=8)
+        avkit.drop_raw("ave")
+        mark.write_text("1")
     rows = _ave_rows(split)
     rng.shuffle(rows)
     rows = balanced_take(rows, lambda r: r["cls"], cap, rng)
-    archive = avkit.fetch_file("UnFaZeD07/AVE-Dataset", "videos.zip", "ave")
-    if archive is None:
-        raise RuntimeError("cannot download AVE videos.zip")
-    wanted = {f"videos/{r['vid']}.mp4": (r["vid"], {"start": r["t0"], "end": r["t1"]}) for r in rows}
-    return rows, convert_zip_videos(archive, "ave", wanted, _WORKERS, frames=8)
+    items = {r["vid"]: cached_item("ave", r["vid"]) for r in rows}
+    return rows, {k: v for k, v in items.items() if v}
 
 
 def ave(split, cap, rng):

@@ -144,3 +144,97 @@ def balanced_take(rows: list, key, cap: int, rng) -> list:
         i += 1
     rng.shuffle(out)
     return out
+
+
+# ---- big files: several connections on one file ----------------------------------------------------------
+def fetch_ranged(repo: str, filename: str, name: str, conns: int = 8, chunk: int = 16 << 20, repo_type: str = "dataset") -> Path | None:
+    """Download one big hub file with `conns` parallel range requests (resumable; falls back to a plain download).
+
+    The mirror serves a single connection at a few hundred KB/s, so one multi-GB archive is only practical this way.
+    Chunks already on disk (listed in `<file>.done`) are skipped after an interruption.
+    """
+    import math
+    import time
+    import urllib.request
+
+    from huggingface_hub import get_hf_file_metadata, hf_hub_url
+
+    try:
+        url = hf_hub_url(repo, filename, repo_type=repo_type)
+        size = int(get_hf_file_metadata(url).size)
+    except Exception:
+        return avkit.fetch_file(repo, filename, name, repo_type)
+    dest = avkit.raw_dir(name) / filename
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists() and dest.stat().st_size == size:
+        return dest
+    part, donef = dest.with_name(dest.name + ".part"), dest.with_name(dest.name + ".done")
+    n = math.ceil(size / chunk)
+    done = {int(x) for x in donef.read_text().split()} if donef.exists() and part.exists() and part.stat().st_size == size else set()
+    if not done:
+        with open(part, "wb") as f:
+            f.truncate(size)
+        donef.write_text("")
+    lock = threading.Lock()
+
+    def grab(i: int) -> bool:
+        s, e = i * chunk, min(size, (i + 1) * chunk) - 1
+        for attempt in range(8):
+            try:
+                req = urllib.request.Request(url, headers={"Range": f"bytes={s}-{e}", "User-Agent": "jevtrainer"})
+                with urllib.request.urlopen(req, timeout=90) as r:
+                    if r.status != 206 and not (r.status == 200 and n == 1):
+                        raise IOError(f"status {r.status}")
+                    buf = r.read()
+                if len(buf) != e - s + 1:
+                    raise IOError("short read")
+                with lock:
+                    with open(part, "r+b") as f:
+                        f.seek(s)
+                        f.write(buf)
+                    with open(donef, "a") as f:
+                        f.write(f"{i}\n")
+                return True
+            except Exception:
+                time.sleep(min(30, 2 ** attempt))
+        return False
+
+    todo = [i for i in range(n) if i not in done]
+    with ThreadPoolExecutor(max(1, min(conns, 8))) as ex:
+        ok = all(ex.map(grab, todo))
+    if not ok:
+        return None
+    part.replace(dest)
+    donef.unlink(missing_ok=True)
+    return dest
+
+
+def convert_parquet_videos(path: Path, name: str, id_col: str, video_col: str, keys: dict[str, str] | None = None,
+                           workers: int = 8, delete_raw: bool = True, **kw) -> int:
+    """Cut frames + sound out of the mp4 bytes of a parquet column; `keys` maps row id -> clip key (None: id itself).
+
+    Rows whose clip is already converted are skipped. Returns the number of newly converted clips.
+    """
+    import pyarrow.parquet as pq
+
+    tmp = avkit.raw_dir(name) / "_x"
+    tmp.mkdir(parents=True, exist_ok=True)
+    n = 0
+
+    def one(item):
+        rid_, data = item
+        key = rid_ if keys is None else keys.get(rid_)
+        if key is None or cached_item(name, key):
+            return 0
+        dst = tmp / f"{key}.mp4"
+        dst.write_bytes(data)
+        return int(_convert_file(dst, name, key, delete_raw, kw) is not None)
+
+    pf = pq.ParquetFile(str(path))
+    with ThreadPoolExecutor(workers) as ex:
+        for rg in range(pf.num_row_groups):
+            tbl = pf.read_row_group(rg, columns=[id_col, video_col])
+            ids, vids = tbl.column(id_col).to_pylist(), tbl.column(video_col).to_pylist()
+            del tbl
+            n += sum(ex.map(one, zip(ids, vids)))
+    return n
