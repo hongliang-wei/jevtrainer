@@ -24,10 +24,11 @@ from jevtrainer.data.base import DatasetSpec, choice_record, mcq_record, registe
 
 _GW = "ONE-Lab/GUI-World"
 _CATS = ["android", "IOS", "XR", "multi", "software", "website"]
-_MAX_BYTES = int(float(os.environ.get("JEVTRAINER_GW_MAX_MB", "12")) * 1e6)
-_N = {"train": int(os.environ.get("JEVTRAINER_GW_TRAIN", "3000")), "test": int(os.environ.get("JEVTRAINER_GW_TEST", "800"))}
+_MAX_BYTES = int(float(os.environ.get("JEVTRAINER_GW_MAX_MB", "8")) * 1e6)
+_N = {"train": int(os.environ.get("JEVTRAINER_GW_TRAIN", "2000")), "test": int(os.environ.get("JEVTRAINER_GW_TEST", "500"))}
 _PART = {"train": "train", "test": "benchmark"}
 _VID = dict(frames=8, max_side=640, keep_audio=False)
+_DEADLINE: dict[str, float] = {}  # one download budget per split and process (the three datasets share the clips)
 
 _ENV = {
     "android": "An Android phone app (touch interface, system navigation bar, mobile layouts)",
@@ -65,7 +66,7 @@ def _select(split: str, cap: int):
     rows = balanced_take(rows, lambda r: r["cat"], min(cap, _N[split]), random.Random(f"gui_world:{split}"))
     keys = {r["video_path"]: r["video_path"].replace("/", "_").rsplit(".", 1)[0] for r in rows}
     files = {keys[r["video_path"]]: r["video_path"] for r in rows}
-    items = bizkit.convert_hub_timed(_GW, "gui_world", files, bizkit.deadline(), **_VID)
+    items = bizkit.convert_hub_timed(_GW, "gui_world", files, _DEADLINE.setdefault(split, bizkit.deadline()), **_VID)
     out = [(r, keys[r["video_path"]]) for r in rows if keys[r["video_path"]] in items]
     return out, items
 
@@ -101,6 +102,7 @@ def gui_world(split, cap, rng):
 def gui_world_goal(split, cap, rng):
     rows, items = _select(split, cap)
     goals: dict[str, list[str]] = {}
+    rows = [(r, k) for r, k in rows if r.get("goal")]
     for r, _ in rows:
         goals.setdefault(r["cat"], []).append(str(r["goal"]).strip().rstrip("."))
     for r, key in rows:
