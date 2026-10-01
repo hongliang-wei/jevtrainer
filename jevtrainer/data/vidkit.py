@@ -166,6 +166,22 @@ def convert_hub(repo: str, name: str, files: dict[str, str], workers: int = WORK
         return {k: v for k, v in ex.map(safe, files.items()) if v}
 
 
+def fetch_many(repo: str, name: str, files: dict[str, str], workers: int = 6) -> dict[str, Path]:
+    """Download `{key: file in repo}` in parallel into raw/<name> (retrying rate limits); returns the keys that arrived."""
+
+    def one(kv):
+        key, fn = kv
+        for attempt in range(4):
+            src = avkit.fetch_file(repo, fn, name)
+            if src is not None:
+                return key, src
+            time.sleep(10 * (attempt + 1))
+        return key, None
+
+    with ThreadPoolExecutor(workers) as ex:
+        return {k: v for k, v in ex.map(one, files.items()) if v}
+
+
 # ---- archives: concatenated / partly downloaded tar(.gz) streams ----------------------------------------
 class ConcatReader(io.RawIOBase):
     """Read several files back to back (the pieces of a split archive); `drop` deletes a piece once it is consumed."""
