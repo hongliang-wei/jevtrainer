@@ -43,7 +43,7 @@ class SlotReadout(Readout):
 
     def encode(self, record: Record, rng=None):
         images = self.images(record)
-        state = self.truncate_state(record)
+        state, plan = self.state_for(record)
         rows = []
         for name, q in record.questions.items():
             opts = q.options()
@@ -57,7 +57,7 @@ class SlotReadout(Readout):
             user = json.dumps({"state": state, "question": question}, ensure_ascii=False)
             content = [{"type": "image"}] * len(images) + [{"type": "text", "text": user}] if images else user
             msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": content}]
-            row = self.tokenize(self.family.chat_text(self.tok, self.processor, msgs, True), images)
+            row = self.tokenize(self.family.chat_text(self.tok, self.processor, msgs, True), images, plan=plan)
             row.reads.append(Read(0, name, {"pos": len(row.input_ids) - 1, "slots": slots}))
             rows.append(row)
         return rows

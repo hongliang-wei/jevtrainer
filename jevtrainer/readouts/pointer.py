@@ -35,12 +35,13 @@ class PointerReadout(Readout):
         prefix = self.tok.bos_token or ""
         if images:
             prefix += self.family.image_placeholder(self.processor) * len(images)
-        head = f"{prefix}<state>{self.truncate_state(record)}"
+        state, plan = self.state_for(record)
+        head = f"{prefix}<state>{state}"
         rows = []
         for name, q in record.questions.items():
             opts = "".join(f"<opt>{self.clean(option_text(l, d, q.type))}</opt>" for l, d in q.options())
             text = f"{head}<q>{self.clean(q.instructions)}{opts}<decide>"
-            row = self.tokenize(text, images, add_special_tokens=not self.family.causal)
+            row = self.tokenize(text, images, add_special_tokens=not self.family.causal, plan=plan)
             ends = self.positions(row.input_ids, "</opt>")
             decide = self.positions(row.input_ids, "<decide>")
             if len(ends) != len(q.labels()) or len(decide) != 1:

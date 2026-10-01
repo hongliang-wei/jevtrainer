@@ -91,6 +91,7 @@ class Record:
     targets: dict[str, Target] = field(default_factory=dict)
     images: list[str] = field(default_factory=list)
     meta: dict[str, Any] = field(default_factory=dict)
+    media: list[dict] = field(default_factory=list)  # image / video (+ own sound) / audio items, see jevtrainer.media
 
     @classmethod
     def from_dict(cls, d: dict) -> "Record":
@@ -108,7 +109,8 @@ class Record:
         for extra in ("category", "family", "split", "group"):
             if extra in d and extra not in meta:
                 meta[extra] = d[extra]
-        return cls(str(d["id"]), d.get("state", ""), questions, targets, list(d.get("images") or []), meta)
+        return cls(str(d["id"]), d.get("state", ""), questions, targets, list(d.get("images") or []), meta,
+                   [dict(m) for m in (d.get("media") or [])])
 
     def to_dict(self) -> dict:
         d: dict[str, Any] = {
@@ -120,6 +122,8 @@ class Record:
             d["targets"] = {k: t.to_dict() for k, t in self.targets.items()}
         if self.images:
             d["images"] = self.images
+        if self.media:
+            d["media"] = self.media
         if self.meta:
             d["meta"] = self.meta
         return d
@@ -127,6 +131,14 @@ class Record:
     def validate(self) -> "Record":
         if not self.questions:
             raise ValueError(f"record {self.id}: no questions")
+        for m in self.media:
+            kind = m.get("type")
+            if kind not in ("image", "video", "audio"):
+                raise ValueError(f"record {self.id}: media type must be image | video | audio, got {kind!r}")
+            if kind != "video" and "path" not in m:
+                raise ValueError(f"record {self.id}: {kind} media needs a path")
+            if kind == "video" and "path" not in m and "frames" not in m:
+                raise ValueError(f"record {self.id}: video media needs a path or frames")
         for name, q in self.questions.items():
             q.validate(name)
         for name, t in self.targets.items():

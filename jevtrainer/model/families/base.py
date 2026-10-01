@@ -146,6 +146,37 @@ class ModelFamily:
     def image_placeholder(self, processor) -> str:
         return getattr(processor, "image_token", "<image>")
 
+    # ---- images / video / audio inside the state -----------------------------------
+    def media_placeholder(self, kind: str, has_audio: bool, processor) -> str:
+        """What stands for one media item in the text; the processor expands it to the right number of tokens."""
+        if kind == "image":
+            return self.image_placeholder(processor)
+        tok = getattr(processor, f"{kind}_token", None)
+        if not tok:
+            raise ValueError(f"model family {self.name!r} has no {kind} input")
+        return tok
+
+    def process_media(self, processor, text: str, media, order, opts):
+        """Run the processor on `text` (with placeholders in `order`) and the media; returns its BatchFeature."""
+        from jevtrainer.media import processor_inputs
+
+        ins = processor_inputs(media, order)
+        kw: dict[str, Any] = {}
+        if ins["images"]:
+            kw["images"] = ins["images"]
+        if ins["videos"]:
+            kw["videos"] = [v.frames for v in ins["videos"]]
+        if ins["audios"]:
+            kw["audio"] = ins["audios"]
+        return processor(text=[text], return_tensors="pt", **kw)
+
+    def merge_multimodal(self, model: nn.Module, batch: dict, embeds: torch.Tensor) -> torch.Tensor:
+        """Write image / video / audio features over their placeholder positions of `embeds`.
+
+        The default does nothing: the backbone gets `pixel_values` & co. through `forward_kwargs` and merges itself.
+        """
+        return embeds
+
     def forward_kwargs(self, model: nn.Module, batch: dict) -> dict:
         """Extra kwargs for backbone forward (position ids, pixel values, ...)."""
         kw = {}

@@ -37,6 +37,9 @@ def state_keys(r: Record) -> set[str]:
     With images, the same text over a different picture is a different item."""
     if r.images:
         return {_norm(r.state_text() + "|" + "|".join(_image_digest(i) for i in r.images))}
+    if r.media:  # same question over another clip is another item; files are identified by their path
+        ref = "|".join(str(m.get("path") or (m.get("frames") or [""])[0]) for m in r.media)
+        return {_norm(r.state_text() + "|" + ref)}
     keys = {_norm(r.state_text())}
     if isinstance(r.state, dict):
         for v in r.state.values():

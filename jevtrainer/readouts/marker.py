@@ -39,8 +39,8 @@ class MarkerReadout(Readout):
         if family.lm_head(model) is None:
             raise ValueError("marker readout needs a model with an LM head")
 
-    def messages(self, record: Record, n_images: int) -> list[dict]:
-        lines = ["## State", self.truncate_state(record), "", "## Decision schema"]
+    def messages(self, record: Record, n_images: int, state: str | None = None) -> list[dict]:
+        lines = ["## State", state if state is not None else self.truncate_state(record), "", "## Decision schema"]
         for name, q in record.questions.items():
             lines.append(f"### {name} ({q.type})")
             lines.append(self.clean(q.instructions))
@@ -61,8 +61,9 @@ class MarkerReadout(Readout):
             if len(q.labels()) > self.max_options:
                 raise ValueError(f"{record.id}/{name}: marker supports at most {self.max_options} options")
         images = self.images(record)
-        text = self.family.chat_text(self.tok, self.processor, self.messages(record, len(images or [])), False)
-        row = self.tokenize(text, images)
+        state, plan = self.state_for(record)
+        text = self.family.chat_text(self.tok, self.processor, self.messages(record, len(images or []), state), False)
+        row = self.tokenize(text, images, plan=plan)
         pos = self.positions(row.input_ids, "<decision>")
         if len(pos) != len(record.questions):
             raise ValueError(f"{record.id}: expected {len(record.questions)} markers, found {len(pos)} (truncated?)")

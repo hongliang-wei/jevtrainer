@@ -21,6 +21,8 @@ from typing import Any
 import torch
 from torch import nn
 
+from jevtrainer.media import MediaOptions, load_media
+from jevtrainer.media import inline as inline_media
 from jevtrainer.schema import Record
 
 
@@ -37,9 +39,19 @@ class Read:
 class Row:
     input_ids: list[int]
     reads: list[Read]
-    pixel_values: torch.Tensor | None = None
-    image_grid_thw: torch.Tensor | None = None
     mm_token_type_ids: list[int] | None = None
+    extra: dict[str, torch.Tensor] = field(default_factory=dict)  # processor outputs per media item (pixel_values, ...)
+
+    @property
+    def pixel_values(self):
+        return self.extra.get("pixel_values")
+
+    @property
+    def image_grid_thw(self):
+        return self.extra.get("image_grid_thw")
+
+
+SEQUENCE_KEYS = ("input_ids", "attention_mask", "token_type_ids", "mm_token_type_ids")
 
 
 @dataclass
@@ -103,22 +115,57 @@ class Readout(nn.Module):
             text = self.tok.decode(ids[: self.cfg.max_state_tokens]) + " …"
         return text
 
-    def tokenize(self, text: str, images: list | None = None, add_special_tokens: bool = False) -> Row:
+    def tokenize(self, text: str, images: list | None = None, add_special_tokens: bool = False, plan=None) -> Row:
+        """Text -> Row. With `images` (legacy) or a media `plan` (see `state_for`) the processor expands placeholders."""
+        if plan is not None:
+            if self.processor is None:
+                raise ValueError("record has media but the model has no processor")
+            media, order = plan
+            out = self.family.process_media(self.processor, text, media, order, self.media_opts)
+            return self._row_from(out)
         if images:
             if self.processor is None:
                 raise ValueError("record has images but the model has no processor")
-            out = self.processor(text=[text], images=images, return_tensors="pt")
-            row = Row(out["input_ids"][0].tolist(), [])
-            row.pixel_values = out.get("pixel_values")
-            row.image_grid_thw = out.get("image_grid_thw")
-            if out.get("mm_token_type_ids") is not None:
-                row.mm_token_type_ids = out["mm_token_type_ids"][0].tolist()
-            return row
+            return self._row_from(self.processor(text=[text], images=images, return_tensors="pt"))
         return Row(self.tok(text, add_special_tokens=add_special_tokens).input_ids, [])
+
+    @staticmethod
+    def _row_from(out) -> Row:
+        row = Row(out["input_ids"][0].tolist(), [])
+        if out.get("mm_token_type_ids") is not None:
+            row.mm_token_type_ids = out["mm_token_type_ids"][0].tolist()
+        row.extra = {k: v for k, v in out.items() if k not in SEQUENCE_KEYS and isinstance(v, torch.Tensor)}
+        return row
 
     def images(self, record: Record) -> list | None:
         """Loaded images, within the `image_pixel_budget` option (total pixels per record)."""
         return record_images(record, self.cfg.options.get("image_pixel_budget")) if record.images else None
+
+    @property
+    def media_opts(self) -> MediaOptions:
+        if getattr(self, "_media_opts", None) is None:
+            self._media_opts = MediaOptions.from_options(self.cfg.options)
+        return self._media_opts
+
+    def state_for(self, record: Record) -> tuple[str, tuple | None]:
+        """The (truncated) state text and, for records with `media`, the plan to hand to `tokenize`.
+
+        Tags ``<image:N>`` / ``<video:N>`` / ``<audio:N>`` in the state become the family's placeholders at the
+        same place; media the state does not mention is placed in front.
+        """
+        text = self.truncate_state(record)
+        if not record.media:
+            return text, None
+        if record.images:
+            raise ValueError(f"{record.id}: use either `images` or `media`, not both")
+        cache = getattr(self, "_media_cache", None)
+        if cache is not None and cache[0] is record:
+            media = cache[1]
+        else:
+            media = load_media(record, self.media_opts)
+            self._media_cache = (record, media)
+        text, order = inline_media(text, media, lambda kind, has_audio: self.family.media_placeholder(kind, has_audio, self.processor))
+        return text, (media, order)
 
     def positions(self, ids: list[int], token: str) -> list[int]:
         tid = self.special_ids[token]
@@ -139,10 +186,10 @@ class Readout(nn.Module):
                 mm[i, : len(r.mm_token_type_ids)] = torch.tensor(r.mm_token_type_ids)
             reads.extend((i, rd) for rd in r.reads)
         batch = {"input_ids": ids, "attention_mask": mask, "reads": reads}
-        pv = [r.pixel_values for r in rows if r.pixel_values is not None]
-        if pv:
-            batch["pixel_values"] = torch.cat(pv)
-            batch["image_grid_thw"] = torch.cat([r.image_grid_thw for r in rows if r.image_grid_thw is not None])
+        keys = list(dict.fromkeys(k for r in rows for k in r.extra))
+        for k in keys:
+            batch[k] = cat_padded([r.extra[k] for r in rows if k in r.extra])
+        if keys or any(r.mm_token_type_ids for r in rows):
             batch["mm_token_type_ids"] = mm
         return batch
 
@@ -160,11 +207,12 @@ class Readout(nn.Module):
 
     def hidden(self, model: nn.Module, batch: dict) -> torch.Tensor:
         backbone = self.family.backbone(model)
-        kw = self.family.forward_kwargs(model, batch)
+        embeds = self.family.merge_multimodal(model, batch, self.embed(model, batch["input_ids"]))
+        args = {"inputs_embeds": embeds, "attention_mask": batch["attention_mask"]}
+        args.update(self.family.forward_kwargs(model, batch))  # a family may replace the attention mask
         if self.family.causal:
-            kw["use_cache"] = False
-        out = backbone(inputs_embeds=self.embed(model, batch["input_ids"]), attention_mask=batch["attention_mask"], **kw)
-        return out.last_hidden_state
+            args["use_cache"] = False
+        return backbone(**args).last_hidden_state
 
     def forward(self, model: nn.Module, batch: dict) -> list[torch.Tensor]:
         """Logits per read, in the order of batch['reads']."""
@@ -176,6 +224,23 @@ class Readout(nn.Module):
     # ---- persistence ----------------------------------------------------------
     def state(self) -> dict[str, torch.Tensor]:
         return {k: v.detach().cpu() for k, v in self.state_dict().items()}
+
+
+def cat_padded(parts: list[torch.Tensor]) -> torch.Tensor:
+    """Concatenate along dim 0, zero-padding trailing dims that differ (audio features of different lengths)."""
+    if len(parts) == 1:
+        return parts[0]
+    nd = parts[0].dim()
+    if nd < 2 or all(p.shape[1:] == parts[0].shape[1:] for p in parts):
+        return torch.cat(parts)
+    shape = [max(p.shape[d] for p in parts) for d in range(1, nd)]
+    out = []
+    for p in parts:
+        pad = []
+        for d in range(nd - 1, 0, -1):
+            pad += [0, shape[d - 1] - p.shape[d]]
+        out.append(torch.nn.functional.pad(p, pad))
+    return torch.cat(out)
 
 
 def load_image(ref: str, root: str | None = None):
