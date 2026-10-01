@@ -65,6 +65,17 @@ def read_csv(repo: str, filename: str, **kw):
     return pd.read_csv(get_file(repo, filename), **kw)
 
 
+def http_text(url: str, name: str, filename: str) -> str:
+    """Small text file from the web (annotation files that live on GitHub), cached under raw/<name>."""
+    import urllib.request
+
+    p = avkit.raw_dir(name) / filename
+    if not p.exists() or p.stat().st_size == 0:
+        data = retry(lambda: urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "jevtrainer"}), timeout=60).read())
+        p.write_bytes(data)
+    return p.read_text(encoding="utf8")
+
+
 def read_parquet(repo: str, filename: str):
     import pandas as pd
 
