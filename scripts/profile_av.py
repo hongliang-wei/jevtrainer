@@ -47,7 +47,7 @@ def main():
         t0 = time.time()
         for batch in batches:
             logits = net(to_device(batch, dev))
-            logits.float().logsumexp(-1).mean().backward()
+            sum(x.float().logsumexp(-1).sum() for x in logits).backward()
         torch.cuda.synchronize()
         print(f"pass {step}: {(time.time() - t0) / len(batches):.2f} s per micro-batch of {a.bs} "
               f"peak={torch.cuda.max_memory_allocated() / 2**30:.1f}GB")
