@@ -139,3 +139,16 @@ def complete_files(root: Path, exts=(".mp4", ".mov", ".avi", ".webm", ".mkv")) -
     files = [p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in exts]
     files.sort(key=lambda p: p.stat().st_mtime)
     return files[:-1]
+
+
+def convert_hub_timed(repo: str, name: str, files: dict[str, str], stop_at: float | None = None, workers: int = WORKERS,
+                      chunk: int = 64, **kw) -> dict[str, dict]:
+    """vidkit.convert_hub in chunks; stops taking new chunks after `stop_at` (partial set instead of a hang)."""
+    out: dict[str, dict] = {}
+    items = list(files.items())
+    for i in range(0, len(items), chunk):
+        if stop_at and time.time() > stop_at:
+            print(f"[bizkit] {name}: time budget reached after {len(out)} clips", flush=True)
+            break
+        out.update(vidkit.convert_hub(repo, name, dict(items[i:i + chunk]), workers=workers, **kw))
+    return out
