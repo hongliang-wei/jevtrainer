@@ -1,4 +1,4 @@
-"""Audio-visual question answering over short video clips (video + its sound track in one record)."""
+﻿"""Audio-visual question answering over short video clips (video + its sound track in one record)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import re
 from collections import defaultdict
 
 from jevtrainer.data import avkit
-from jevtrainer.data.base import DatasetSpec, hf_file, mcq_record, register, rid
+from jevtrainer.data.base import DatasetSpec, hf_file, hf_listing, mcq_record, register, rid
 
 _Q = "Which option correctly answers the question about the video and its sound?"
 _WORKERS = int(os.environ.get("JEVTRAINER_AV_WORKERS", "8"))

@@ -1,4 +1,4 @@
-"""DatasetSpec and loading. A dataset is one `register(DatasetSpec(...))` call.
+﻿"""DatasetSpec and loading. A dataset is one `register(DatasetSpec(...))` call.
 
 `build(split, cap, seed)` yields `Record`s. Results are cached as JSONL under
 ``$JEVTRAINER_CACHE`` (default ``~/.cache/jevtrainer``), so conversion runs once.
@@ -78,6 +78,13 @@ def hf_file(repo: str, filename: str, repo_type: str = "dataset") -> str:
     from huggingface_hub import hf_hub_download
 
     return hf_hub_download(repo, filename, repo_type=repo_type)
+
+
+def hf_listing(repo: str, prefix: str = "", repo_type: str = "dataset") -> set[str]:
+    """File names of a hub repo that start with prefix."""
+    from huggingface_hub import HfApi
+
+    return {f for f in HfApi().list_repo_files(repo, repo_type=repo_type) if f.startswith(prefix)}
 
 
 def take(ds, cap: int, rng: random.Random):

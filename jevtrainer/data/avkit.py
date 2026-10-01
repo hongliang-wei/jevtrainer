@@ -1,4 +1,4 @@
-"""Helpers shared by audio / video converters: fetch raw files, cut frames and sound with ffmpeg.
+﻿"""Helpers shared by audio / video converters: fetch raw files, cut frames and sound with ffmpeg.
 
 Layout (all under `$JEVTRAINER_CACHE`, default ~/.cache/jevtrainer):
 
@@ -79,7 +79,7 @@ def convert_videos(repo: str, name: str, items: dict[str, str], workers: int = 8
     def one(kv):
         key, fn = kv
         out = media_dir(name, key)
-        if (out / "f00.jpg").exists():  # converted by an earlier run
+        if (out / "f01.jpg").exists():  # converted by an earlier run
             files = sorted(out.glob("f*.jpg"))
             dur = probe_cache(out)
             item = {"type": "video", "frames": [str(f) for f in files], "fps": len(files) / max(dur, 0.1), "duration": dur}
