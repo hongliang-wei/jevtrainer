@@ -1,0 +1,8 @@
+# ablate: none | mute (no sound) | black (all frames black, sound kept) | shuffle_audio (sound of another record).
+# Run once per value with --set ablate=mute etc.; results go to <checkpoint>/eval_ablate_<value>/ and carry ablate in results.json / results.md.
+# Audio-visual questions that need the sound: WorldSense, Daily-Omni, OmniBench, AV-Odyssey, AV-SpeakerBench.
+checkpoint: runs/av/omni3b_v1
+benchmarks: av-omni
+ablate: none
+batch_size: 4
+# max_samples: 1000   # subsample every benchmark (default: full sets)

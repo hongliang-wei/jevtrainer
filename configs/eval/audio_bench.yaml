@@ -1,0 +1,7 @@
+# ablate: none | mute (no sound) | black (all frames black, sound kept) | shuffle_audio (sound of another record).
+# Run once per value with --set ablate=mute etc.; results go to <checkpoint>/eval_ablate_<value>/ and carry ablate in results.json / results.md.
+# Audio understanding: MMAU test-mini, MMAR, MMSU, VoiceBench mmsu / openbookqa. (mute removes the only input here: expect chance.)
+checkpoint: runs/av/omni3b_v1
+benchmarks: audio-bench
+ablate: none
+batch_size: 8

@@ -150,6 +150,8 @@ class EvalConfig(Strict):
     dtype: Literal["bf16", "fp16", "fp32"] = "bf16"
     output_dir: str | None = None
     temperature: float | None = None  # override the checkpoint's fitted temperature
+    ablate: Literal["none", "mute", "black", "shuffle_audio"] = "none"  # modality ablation, see jevtrainer/eval/ablate.py
+    readout_options: dict[str, Any] = {}  # override media options at eval time, e.g. {video_frames: 16}
 
     @field_validator("benchmarks", mode="before")
     @classmethod

@@ -32,7 +32,35 @@ def _image_digest(ref: str) -> str:
         return ref
 
 
+_YT = re.compile(r"^([A-Za-z0-9_-]{11})(?:_\d+){0,2}$")  # YouTube id, optionally followed by _start[_end]
+
+
+def source_ids(r: Record) -> set[str]:
+    """Identifiers of the source material (video / audio recording) behind a record.
+
+    `meta["source_id"]` (a string or a list; converters write e.g. "yt:<YouTube id>" so the same video under another
+    file path still matches). Without it, a media file kept under a YouTube-id-looking name yields "yt:<id>".
+    """
+    sid = r.meta.get("source_id")
+    if sid:
+        return {str(s) for s in (sid if isinstance(sid, (list, tuple)) else [sid])}
+    out = set()
+    for m in r.media:
+        ref = m.get("path") or (m.get("frames") or [m.get("audio") or ""])[0]
+        key = Path(ref).parent.name if m.get("frames") or Path(ref).stem in ("a", "i") else Path(ref).stem
+        mo = _YT.match(key)
+        if mo and not key.startswith("video_"):
+            out.add("yt:" + mo.group(1))
+    return out
+
+
 def state_keys(r: Record) -> set[str]:
+    """Content keys (see `_content_keys`) plus one key per source id, so the same video behind another question,
+    path or split still counts as overlap."""
+    return _content_keys(r) | {hashlib.sha1(("source|" + s).encode()).hexdigest() for s in source_ids(r)}
+
+
+def _content_keys(r: Record) -> set[str]:
     """The whole state plus every long text field, so a test request inside a new tool catalog still matches.
     With images, the same text over a different picture is a different item."""
     if r.images:

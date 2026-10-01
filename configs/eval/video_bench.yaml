@@ -1,0 +1,11 @@
+# ablate: none | mute (no sound) | black (all frames black, sound kept) | shuffle_audio (sound of another record).
+# Run once per value with --set ablate=mute etc.; results go to <checkpoint>/eval_ablate_<value>/ and carry ablate in results.json / results.md.
+# Video understanding: MVBench, TempCompass, EgoSchema, LongVideoBench, Video-MME, Perception Test.
+# Add benchmarks: video-bench-sub for Video-MME with subtitles. The long sets store 16 frames per clip; media.py keeps only
+# video_frames of them, so raise it here (the checkpoint was trained with 8). Lower it back to 8 to compare with training.
+checkpoint: runs/av/omni3b_v1
+benchmarks: video-bench
+ablate: none
+batch_size: 2
+readout_options:
+  video_frames: 16

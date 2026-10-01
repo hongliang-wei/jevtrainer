@@ -56,8 +56,15 @@ def evaluate(config: Optional[Path] = typer.Argument(None), set: Optional[List[s
         raise typer.BadParameter("set checkpoint or model")
     if cfg.temperature is not None:
         b.temperature = {"default": cfg.temperature}
-    out = cfg.output_dir or (str(Path(cfg.checkpoint) / "eval") if cfg.checkpoint else "runs/eval")
-    run_benchmarks(b, cfg.benchmarks, out, cfg.max_samples, cfg.batch_size)
+    if cfg.readout_options:  # e.g. video_frames: 16 for the long-video benchmarks
+        b.readout.cfg.options.update(cfg.readout_options)
+        b.readout._media_opts = None
+    suffix = f"_ablate_{cfg.ablate}" if cfg.ablate != "none" else ""
+    if cfg.output_dir:
+        out = cfg.output_dir if (not suffix or "ablate" in cfg.output_dir) else cfg.output_dir.rstrip("/\\") + suffix
+    else:
+        out = str(Path(cfg.checkpoint) / f"eval{suffix}") if cfg.checkpoint else f"runs/eval{suffix}"
+    run_benchmarks(b, cfg.benchmarks, out, cfg.max_samples, cfg.batch_size, ablate=cfg.ablate)
     typer.echo((Path(out) / "results.md").read_text(encoding="utf-8"))
 
 

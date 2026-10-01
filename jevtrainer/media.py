@@ -176,8 +176,15 @@ def load_media(record: Record, opts: MediaOptions) -> Media:
                     audio = load_audio(_resolve(it["audio"], root), va_max)
                 m.videos.append(VideoClip(frames, len(frames) / max(dur, 1e-3), dur, audio))
             else:
-                clip = decode_video_file(_resolve(it["path"], root), opts.video_frames, va_max, opts.use_audio_in_video)
+                own_sound = opts.use_audio_in_video and not it.get("mute") and not it.get("audio")
+                clip = decode_video_file(_resolve(it["path"], root), opts.video_frames, va_max, own_sound)
                 clip.frames = [_resize(f, opts.frame_max_side) for f in clip.frames]
+                if it.get("black"):  # evaluation ablation: same timing, nothing to see
+                    clip.frames = [Image.new("RGB", f.size) for f in clip.frames]
+                if it.get("mute"):
+                    clip.audio = None
+                elif it.get("audio") and opts.use_audio_in_video:  # sound taken from another file (ablation)
+                    clip.audio = load_audio(_resolve(it["audio"], root), va_max)
                 m.videos.append(clip)
         else:
             raise ValueError(f"{record.id}: unknown media type {kind!r}")
