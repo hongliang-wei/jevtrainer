@@ -85,7 +85,7 @@ def vggsound(split, cap, rng):
         rng.shuffle(order)
         rec = mcq_record(rid("vggsound", split, vid), {"clip": "<video:1>", "question": "What is making the sound in this clip?"},
                          "Looking at and listening to the clip, which option best describes the main sound-producing event?",
-                         [options[i] for i in order], order.index(0), area="av", label=label)
+                         [options[i] for i in order], order.index(0), area="av", category=label)
         if rec:
             rec.media = [media]
             yield rec
