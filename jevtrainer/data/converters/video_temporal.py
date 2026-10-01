@@ -145,7 +145,6 @@ def qvhighlights(split, cap, rng):
     url = f"https://raw.githubusercontent.com/jayleicn/moment_detr/main/data/highlight_{'train' if split == 'train' else 'val'}_release.jsonl"
     rows = [json.loads(x) for x in vidkit.http_text(url, "qvhighlights", f"{split}.jsonl").splitlines() if x.strip()]
     have = vidkit.listing(_QVH_VID)
-    rows = [r for r in rows if any(f.endswith(f"/{r['vid']}.mp4") or f == f"{r['vid']}.mp4" for f in ()) or True]
     names = {Path(f).stem: f for f in have if f.endswith(".mp4")}
     rows = [r for r in rows if r["vid"] in names]
     seen, uniq = set(), []
