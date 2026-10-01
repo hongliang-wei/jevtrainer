@@ -73,11 +73,12 @@ class Readout(nn.Module):
         if ids and (max(ids) - min(ids) + 1 != len(ids) or max(ids) != len(tok) - 1):
             raise ValueError("readout special tokens must be the last contiguous ids of the tokenizer")
         if self.special is None and ids:
-            emb = family.input_embeddings(model).weight
-            d = emb.shape[1]
+            emb = family.input_embeddings(model)
+            n, d = emb.weight.shape
             self.special = nn.Embedding(len(ids), d)
-            with torch.no_grad():
-                sample = emb[torch.randint(0, emb.shape[0], (4096,))].float()
+            with torch.no_grad():  # through the module: some embeddings scale their output (Gemma: x sqrt(hidden))
+                idx = torch.randint(0, n, (4096,))
+                sample = emb(idx.to(emb.weight.device)).float().cpu()
                 self.special.weight.copy_(sample.mean(0) + sample.std(0) * torch.randn(len(ids), d) * 0.5)
         self.build(family, model)
 

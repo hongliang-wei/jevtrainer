@@ -17,9 +17,27 @@ from transformers import AutoConfig, PretrainedConfig
 
 from jevtrainer.registry import FAMILIES
 
-VISION_PAT = re.compile(r"(^|\.)(visual|vision_tower|vision_model|vision|image_encoder|multi_modal_projector|mm_projector|merger)(\.|$)")
+# non-language towers: frozen by default, never LoRA targets
+VISION_PAT = re.compile(
+    r"(^|\.)(visual|vision_tower|vision_model|vision|image_encoder|multi_modal_projector|mm_projector|merger"
+    r"|audio_tower|audio_model|embed_vision|embed_audio)(\.|$)"
+)
 LINEAR_ATTN_PAT = re.compile(r"DeltaNet|Mamba|GatedDelta|LinearAttention|RWKV|Recurrent", re.I)
 LORA_NAME_PAT = re.compile(r"proj|^fc\d?$|dense|^(query|key|value)$|^w[qkvo123]$|^W(qkv|o|i)$")
+# MoE routers and factorized-embedding projections (Nandi / Lumma) stay out of LoRA
+LORA_SKIP_PAT = re.compile(r"(^|\.)router(\.|$)|(^|\.)(embedding_proj|lm_head_proj)$")
+
+
+class OutputHead(nn.Module):
+    """LM head as the CausalLM forward applies it: optional down-projection first, optional logit soft-capping."""
+
+    def __init__(self, head: nn.Module, pre: nn.Module | None = None, softcap: float | None = None):
+        super().__init__()
+        self.head, self.pre, self.softcap = head, pre, softcap
+
+    def forward(self, h: torch.Tensor) -> torch.Tensor:
+        z = self.head(self.pre(h) if self.pre is not None else h)
+        return torch.tanh(z / self.softcap) * self.softcap if self.softcap else z
 
 
 class ModelFamily:
@@ -37,14 +55,19 @@ class ModelFamily:
     def is_multimodal(self, config: PretrainedConfig) -> bool:
         return getattr(config, "vision_config", None) is not None
 
-    def load_model(self, path: str, dtype: torch.dtype, attn_implementation: str | None = None) -> nn.Module:
+    def load_model(self, path: str, dtype: torch.dtype, attn_implementation: str | None = None, quantize: str = "none",
+                   device_map: str | dict | None = None, max_memory: dict | None = None) -> nn.Module:
         from transformers import AutoModelForCausalLM, AutoModelForImageTextToText
 
         config = AutoConfig.from_pretrained(path, trust_remote_code=True)
         cls = AutoModelForImageTextToText if self.is_multimodal(config) else AutoModelForCausalLM
-        kw: dict[str, Any] = {"dtype": dtype, "trust_remote_code": True}
+        kw: dict[str, Any] = {"dtype": dtype, "trust_remote_code": True, **quantization_kwargs(quantize, dtype)}
         if attn_implementation:
             kw["attn_implementation"] = attn_implementation
+        if device_map is not None:
+            kw["device_map"] = device_map
+            if max_memory:
+                kw["max_memory"] = max_memory
         return cls.from_pretrained(path, **kw)
 
     def load_processor(self, path: str, multimodal: bool):
@@ -73,13 +96,21 @@ class ModelFamily:
         return getattr(base, "model", None) or getattr(base, base.base_model_prefix)
 
     def lm_head(self, model: nn.Module) -> nn.Module | None:
-        return self.base(model).get_output_embeddings()
+        base = self.base(model)
+        head = base.get_output_embeddings()
+        if head is None:
+            return None
+        pre = getattr(base, "lm_head_proj", None)
+        cap = getattr(_text_config(base.config), "final_logit_softcapping", None)
+        return OutputHead(head, pre, cap) if (pre is not None or cap) else head
 
     def input_embeddings(self, model: nn.Module) -> nn.Embedding:
         return self.base(model).get_input_embeddings()
 
     def hidden_size(self, model: nn.Module) -> int:
-        return self.input_embeddings(model).embedding_dim
+        """Width of the backbone's last hidden state (can differ from the embedding width when it is factorized)."""
+        h = getattr(_text_config(self.base(model).config), "hidden_size", None)
+        return int(h) if h else self.input_embeddings(model).embedding_dim
 
     def has_linear_attention(self, model: nn.Module) -> bool:
         return any(LINEAR_ATTN_PAT.search(type(m).__name__) for m in self.base(model).modules())
@@ -95,13 +126,13 @@ class ModelFamily:
         """Regex over full module names: every Linear in the language model except the LM head."""
         leaves = set()
         for name, mod in self.base(model).named_modules():
-            if isinstance(mod, nn.Linear) and not VISION_PAT.search(name) and not name.endswith("lm_head"):
+            if isinstance(mod, nn.Linear) and not VISION_PAT.search(name) and not LORA_SKIP_PAT.search(name) and not name.endswith("lm_head"):
                 leaf = name.rsplit(".", 1)[-1]
                 if LORA_NAME_PAT.search(leaf):
                     leaves.add(leaf)
         if not leaves:
             raise ValueError("could not infer LoRA targets; set lora.targets in the config")
-        return r"^(?!.*(visual|vision|lm_head)).*\.(" + "|".join(sorted(leaves)) + r")$"
+        return r"^(?!.*(visual|vision|audio|lm_head|router\.)).*\.(" + "|".join(sorted(leaves)) + r")$"
 
     # ---- prompting -------------------------------------------------------
     def chat_text(self, tok, processor, messages: list[dict], add_generation_prompt: bool) -> str:
@@ -122,6 +153,27 @@ class ModelFamily:
             if batch.get(k) is not None:
                 kw[k] = batch[k]
         return kw
+
+
+def quantization_kwargs(quantize: str, dtype: torch.dtype) -> dict:
+    """bitsandbytes loading for QLoRA. Only nn.Linear layers are quantized: fused MoE experts stay in `dtype`."""
+    if quantize in (None, "none"):
+        return {}
+    from transformers import BitsAndBytesConfig
+
+    skip = ["lm_head", "visual", "vision_tower", "audio_tower", "multi_modal_projector", "embed_vision", "embed_audio", "router"]
+    if quantize == "4bit":
+        q = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_use_double_quant=True,
+                               bnb_4bit_compute_dtype=dtype, llm_int8_skip_modules=skip)
+    elif quantize == "8bit":
+        q = BitsAndBytesConfig(load_in_8bit=True, llm_int8_skip_modules=skip)
+    else:
+        raise ValueError(f"quantize must be none | 8bit | 4bit, got {quantize!r}")
+    return {"quantization_config": q, "device_map": {"": torch.cuda.current_device() if torch.cuda.is_available() else "cpu"}}
+
+
+def _text_config(config: PretrainedConfig) -> PretrainedConfig:
+    return config.get_text_config() if hasattr(config, "get_text_config") else config
 
 
 def _has_images(messages: list[dict]) -> bool:

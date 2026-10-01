@@ -145,6 +145,25 @@ its backbone and LM head are, which linear layers get LoRA, and which modules ar
 `GenericFamily` infers all of this, so most new checkpoints need no code. Tested: Qwen3.5 (text and
 VL, hybrid linear attention), Qwen3, Llama-architecture, ModernBERT (slot and pointer only).
 
+Also wired up, with GPU runs still pending:
+
+| base | family | notes |
+|---|---|---|
+| MiniCPM5-1B / 2B | llama | |
+| Qwen3.5-4B / 9B, Qwen3.8-27B | qwen | 27B: `quantize: 4bit` on a 48 GB card |
+| gemma-3-270m | gemma | |
+| gemma-4-E4B | gemma | per-layer embeddings; text only (audio / vision towers frozen, no LoRA) |
+| gemma-4-12B | gemma | `gemma4_unified` needs transformers >= 5.17 |
+| gemma-4-26B-A4B-it | gemma | MoE: router excluded from LoRA; 52 GB in bf16, so `device_map: auto` + `max_memory` |
+| LFM2.5-350M / 2.6B | generic | |
+| Nandi-Mini-150M, Lumma-0.6B | generic | `trust_remote_code`; factorized embedding / `lm_head_proj` handled |
+
+Memory on one 48 GB card: full fine-tuning keeps fp32 weights + AdamW states (16 bytes per parameter),
+so it stops at about 2.6B; `optim: adamw_8bit` cuts that to about 10 bytes. For larger models use
+LoRA, and `quantize: 4bit` (QLoRA; LoRA only) when bf16 weights do not fit. Quantization and
+`optim: adamw_8bit` need `bitsandbytes`. Checkpoints trained quantized reload quantized with the
+adapter unmerged.
+
 ## Extending
 
 * a dataset: [docs/adding_dataset.md](docs/adding_dataset.md)

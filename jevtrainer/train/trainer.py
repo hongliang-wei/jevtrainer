@@ -63,7 +63,8 @@ class Trainer:
     def load_model(self) -> Bundle:
         c = self.cfg
         dtype = "fp32" if c.finetune == "full" else c.dtype
-        b = build(c.model, c.readout, c.family, dtype, c.readout_options, c.max_state_tokens)
+        b = build(c.model, c.readout, c.family, dtype, c.readout_options, c.max_state_tokens,
+                  quantize=c.quantize, device_map=c.device_map, max_memory=c.max_memory)
         prepare_finetune(b, c.finetune, c.lora.model_dump(), c.freeze_vision, c.grad_ckpt)
         return b
 
@@ -127,15 +128,23 @@ class Trainer:
         net = DecisionModel(b.model, b.readout)
         head = [p for p in b.readout.parameters() if p.requires_grad]
         body = [p for p in b.model.parameters() if p.requires_grad]
-        opt = torch.optim.AdamW(
-            [{"params": body, "lr": c.lr}, {"params": head, "lr": c.head_lr}], weight_decay=c.weight_decay, betas=(0.9, 0.98)
-        )
+        groups = [{"params": body, "lr": c.lr}, {"params": head, "lr": c.head_lr}]
+        if c.optim == "adamw_8bit":
+            import bitsandbytes as bnb
+
+            opt = bnb.optim.AdamW8bit(groups, weight_decay=c.weight_decay, betas=(0.9, 0.98))
+        else:
+            opt = torch.optim.AdamW(groups, weight_decay=c.weight_decay, betas=(0.9, 0.98))
         steps = self.num_steps(len(train))
         warm = int(steps * c.warmup_ratio)
         sched = torch.optim.lr_scheduler.LambdaLR(
             opt, lambda s: min(1.0, (s + 1) / max(1, warm)) * 0.5 * (1 + math.cos(math.pi * min(1.0, s / max(1, steps))))
         )
-        net, opt, sched = acc.prepare(net, opt, sched)
+        if c.quantize != "none" or c.device_map is not None:  # weights already placed by from_pretrained
+            b.readout.to(acc.device)
+            net, opt, sched = acc.prepare(net, opt, sched, device_placement=[False, None, None])
+        else:
+            net, opt, sched = acc.prepare(net, opt, sched)
         step, epoch, pos = 0, 0, 0
         state_dir = self.latest_state() if c.resume else None
         if c.resume and state_dir is None:
@@ -281,6 +290,9 @@ class Trainer:
             "max_state_tokens": c.max_state_tokens,
             "max_length": c.max_length,
             "finetune": c.finetune,
+            "quantize": c.quantize,
+            "device_map": c.device_map,
+            "max_memory": c.max_memory,
         }
         save(b, path, meta)
         if b.temperature and path != self.out:

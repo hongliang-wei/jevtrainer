@@ -36,11 +36,14 @@ def build(
     max_state_tokens: int = 2048,
     attn_implementation: str | None = None,
     tokenizer_path: str | None = None,
+    quantize: str = "none",
+    device_map: str | dict | None = None,
+    max_memory: dict | None = None,
 ) -> Bundle:
     from transformers import AutoConfig
 
     fam = resolve_family(model_path, family)
-    model = fam.load_model(model_path, DTYPES[dtype], attn_implementation)
+    model = fam.load_model(model_path, DTYPES[dtype], attn_implementation, quantize, device_map, max_memory)
     multimodal = fam.is_multimodal(AutoConfig.from_pretrained(model_path, trust_remote_code=True))
     tok, processor = fam.load_processor(tokenizer_path or model_path, multimodal)
     ro = READOUTS.get(readout)(ReadoutConfig(max_state_tokens=max_state_tokens, options=dict(readout_options or {})))
@@ -49,9 +52,14 @@ def build(
 
 
 def prepare_finetune(b: Bundle, finetune: str, lora: dict, freeze_vision: bool = True, grad_ckpt: bool = True) -> None:
+    quantized = getattr(b.model, "is_loaded_in_4bit", False) or getattr(b.model, "is_loaded_in_8bit", False)
+    if quantized and finetune != "lora":
+        raise ValueError("quantized models train with finetune: lora only (QLoRA)")
     for m in b.family.vision_modules(b.model) if freeze_vision else []:
         m.requires_grad_(False)
     if finetune == "lora":
+        # no prepare_model_for_kbit_training: it upcasts every non-quantized weight to fp32, which for MoE
+        # models (fused experts are not quantized) doubles the largest part of the model
         from peft import LoraConfig, get_peft_model
 
         targets = lora.get("targets", "auto")
@@ -109,16 +117,23 @@ def load(ckpt: str | Path, dtype: str = "bf16", device: str | None = None) -> Bu
         meta.get("readout_options"),
         meta.get("max_state_tokens", 2048),
         tokenizer_path=str(ckpt / "tokenizer"),
+        quantize=meta.get("quantize", "none"),
+        device_map=meta.get("device_map"),
+        max_memory=meta.get("max_memory"),
     )
+    placed = meta.get("quantize", "none") != "none" or meta.get("device_map") is not None
     if (ckpt / "adapter").exists():
         from peft import PeftModel
 
-        b.model = PeftModel.from_pretrained(b.model, str(ckpt / "adapter")).merge_and_unload()
+        b.model = PeftModel.from_pretrained(b.model, str(ckpt / "adapter"))
+        if not placed:  # cannot merge into quantized weights
+            b.model = b.model.merge_and_unload()
     b.readout.load_state_dict(load_file(str(ckpt / "readout.safetensors")))
     b.readout.float()
     b.temperature = _temperature(ckpt)
     if device:
-        b.model.to(device)
+        if not placed:
+            b.model.to(device)
         b.readout.to(device)
     b.model.eval()
     b.readout.eval()

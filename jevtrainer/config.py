@@ -93,6 +93,10 @@ class TrainConfig(Strict):
     grad_accum: int = 1
     max_grad_norm: float = 1.0
     dtype: Literal["bf16", "fp16", "fp32"] = "bf16"
+    quantize: Literal["none", "8bit", "4bit"] = "none"  # bitsandbytes QLoRA, for models that do not fit in bf16
+    device_map: str | None = None  # "auto" spreads / offloads layers over GPU and CPU (slow; big MoE models)
+    max_memory: dict[str, str] | None = None  # with device_map, e.g. {"0": "44GiB", "cpu": "200GiB"}
+    optim: Literal["adamw", "adamw_8bit"] = "adamw"  # 8-bit states (bitsandbytes) cut optimizer memory ~4x
     grad_ckpt: bool = True
     group_by_length: bool = True
     num_workers: int = 2
