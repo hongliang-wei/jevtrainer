@@ -63,12 +63,11 @@ def _similar_classes(classes: list[str]) -> dict[str, list[str]]:
 
 def vggsound(split, cap, rng):
     repo = "11hu83/vggsound"
-    have = hf_listing(repo, "video/")
     rows = []
-    with open(hf_file(repo, "metadata.csv"), encoding="utf8") as f:
+    with open(hf_file(repo, "metadata.csv"), encoding="utf8") as f:  # one row per clip file of the repo
         for r in csv.DictReader(f):
             vid = r["file_name"].split("/")[1]
-            if r["file_name"] in have and (hash_bucket("vggsound", vid) < 10) == (split == "test"):
+            if (hash_bucket("vggsound", vid) < 10) == (split == "test"):
                 rows.append((vid, r["text"].strip(), r["file_name"]))
     classes = sorted({c for _, c, _ in rows})
     sim = _similar_classes(classes)
