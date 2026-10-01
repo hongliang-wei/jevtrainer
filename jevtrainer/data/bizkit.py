@@ -58,7 +58,7 @@ def stream_tar_videos(repo: str, filename: str, name: str, accept, quota: int, w
     for attempt in range(retries):
         try:
             side: dict[str, bytes] = {}
-            with HfFileSystem().open(f"datasets/{repo}/{filename}", "rb") as f, tarfile.open(fileobj=f, mode="r|*") as t, \
+            with HttpStream(repo, filename) as f, tarfile.open(fileobj=f, mode="r|*") as t, \
                     ThreadPoolExecutor(workers) as ex:
                 futs = []
                 for m in t:
@@ -113,7 +113,7 @@ def stream_rar(repo: str, filename: str, name: str, max_mb: int, dest: str, stop
                          stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
     n = 0
     try:
-        with HfFileSystem().open(f"datasets/{repo}/{filename}", "rb") as f:
+        with HttpStream(repo, filename) as f:
             while n < max_mb << 20 and not (stop_at and time.time() > stop_at):
                 b = f.read(1 << 20)
                 if not b:
@@ -152,3 +152,60 @@ def convert_hub_timed(repo: str, name: str, files: dict[str, str], stop_at: floa
             break
         out.update(vidkit.convert_hub(repo, name, dict(items[i:i + chunk]), workers=workers, **kw))
     return out
+
+class HttpStream:
+    """Sequential, resumable read of one hub file through the (mirror) resolve URL.
+
+    Much faster than HfFileSystem range reads on the mirror; a dropped connection is resumed with a Range header,
+    so tar / rar consumers never notice. Only forward reads are supported.
+    """
+
+    def __init__(self, repo: str, filename: str, repo_type: str = "datasets"):
+        from huggingface_hub import get_token
+
+        base = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
+        self.url = f"{base}/{repo_type}/{repo}/resolve/main/{filename}"
+        tok = get_token()
+        self.headers = {"Authorization": f"Bearer {tok}"} if tok else {}
+        self.pos, self.resp, self.fails, self.total = 0, None, 0, 0
+
+    def _open(self):
+        import requests
+
+        h = dict(self.headers)
+        if self.pos:
+            h["Range"] = f"bytes={self.pos}-"
+        self.resp = requests.get(self.url, headers=h, stream=True, timeout=(20, 40), allow_redirects=True)
+        if self.resp.status_code == 416:
+            self.resp = None
+            return False
+        self.resp.raise_for_status()
+        self.total = self.pos + int(self.resp.headers.get("Content-Length", 0))
+        return True
+
+    def read(self, n: int = 1 << 20) -> bytes:
+        while True:
+            try:
+                if self.resp is None and not self._open():
+                    return b""
+                b = self.resp.raw.read(n)
+                if not b and self.pos < self.total:
+                    raise ConnectionError("body ended early")
+                self.pos += len(b)
+                self.fails = 0
+                return b
+            except Exception:  # noqa: BLE001
+                self.fails += 1
+                if self.fails > 6:
+                    raise
+                self.resp = None
+                time.sleep(3 * self.fails)
+    def close(self):
+        if self.resp is not None:
+            self.resp.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        self.close()
