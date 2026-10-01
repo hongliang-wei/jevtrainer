@@ -103,6 +103,8 @@ class QwenOmniFamily(ModelFamily):
 
         def put(embeds, token_id, feats, what):
             mask = (ids == token_id).unsqueeze(-1)
+            if isinstance(feats, (list, tuple)):  # per-item tensors in newer transformers
+                feats = torch.cat(list(feats), dim=0)
             feats = feats.to(embeds.device, embeds.dtype)
             if int(mask.sum()) * embeds.shape[-1] != feats.numel():
                 raise ValueError(f"{what}: {int(mask.sum())} placeholders but {feats.numel() // embeds.shape[-1]} feature rows")
