@@ -99,8 +99,9 @@ def stream_tar_videos(repo: str, filename: str, name: str, accept, quota: int, w
     return done
 
 
-def stream_rar(repo: str, filename: str, name: str, max_mb: int, dest: str, stop_at: float | None = None) -> Path:
-    """Pipe the first `max_mb` MB of an archive (rar, zip-less formats bsdtar reads) into raw/<name>/<dest>.
+def stream_rar(repo: str, filename: str, name: str, max_mb: int, dest: str, stop_at: float | None = None,
+               max_files: int | None = None) -> Path:
+    """Pipe the first `max_mb` MB (or until `max_files` files exist) of an archive through `bsdtar -x` into raw/<name>/<dest>.
 
     Files appear in archive order; the newest one is cut off, so callers drop the last-modified file.
     """
@@ -119,6 +120,8 @@ def stream_rar(repo: str, filename: str, name: str, max_mb: int, dest: str, stop
                     break
                 p.stdin.write(b)
                 n += len(b)
+                if max_files and (n >> 20) % 4 == 0 and sum(1 for x in out.rglob("*") if x.is_file()) > max_files:
+                    break
     except (BrokenPipeError, OSError):
         pass
     finally:
