@@ -41,6 +41,29 @@ def main():
     print(f"collate: {(time.time() - t0) / len(recs):.2f} s/record (one process)")
     print("tokens/record:", [int(x["attention_mask"].sum()) for x in rows if x is not None][:8])
 
+    batch = to_device(col(recs[:a.bs]), dev)
+    th = b.family.base(b.model) if hasattr(b.family, "base") else None
+    print("attn:", getattr(b.model.config, "_attn_implementation", None), getattr(th, "config", None) and getattr(th.config, "_attn_implementation", None))
+    for name, fn in (
+        ("audio tower", lambda: th.get_audio_features(batch["input_features"], feature_attention_mask=batch["feature_attention_mask"], return_dict=True)),
+        ("video tower", lambda: th.get_video_features(batch["pixel_values_videos"], batch["video_grid_thw"], return_dict=True)),
+    ):
+        if th is None:
+            break
+        for i in range(2):
+            torch.cuda.synchronize()
+            t0 = time.time()
+            with torch.no_grad():
+                fn()
+            torch.cuda.synchronize()
+        print(f"{name}: {time.time() - t0:.2f} s (micro-batch of {a.bs})")
+    with torch.no_grad():
+        torch.cuda.synchronize()
+        t0 = time.time()
+        net(batch)
+        torch.cuda.synchronize()
+        print(f"full forward no-grad: {time.time() - t0:.2f} s")
+
     for step in range(3):
         batches = [col(recs[i:i + a.bs]) for i in range(0, len(recs), a.bs)]
         torch.cuda.synchronize()
