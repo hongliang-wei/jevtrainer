@@ -12,6 +12,7 @@ Builds on `avkit` / `vidkit` (both untouched). Two things the other helpers do n
 
 from __future__ import annotations
 
+import io
 import os
 import shutil
 import subprocess
@@ -209,3 +210,72 @@ class HttpStream:
 
     def __exit__(self, *a):
         self.close()
+
+class RangeFile(io.RawIOBase):
+    """Seekable read-only view of one hub file via HTTP Range requests (lets `zipfile` open a remote zip).
+
+    Only the central directory and the members you read are transferred.
+    """
+
+    def __init__(self, repo: str, filename: str, repo_type: str = "datasets", block: int = 1 << 18):
+        from huggingface_hub import get_token
+
+        base = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
+        self.url = f"{base}/{repo_type}/{repo}/resolve/main/{filename}"
+        tok = get_token()
+        self.headers = {"Authorization": f"Bearer {tok}"} if tok else {}
+        self.block, self.pos, self.buf = block, 0, (0, b"")
+        r = self._get(0, 0)
+        self.size = int(r.headers["Content-Range"].split("/")[1])
+
+    def _get(self, a: int, b: int):
+        import requests
+
+        for i in range(8):
+            try:
+                r = requests.get(self.url, headers={**self.headers, "Range": f"bytes={a}-{b}"}, timeout=(20, 60))
+                if r.status_code in (200, 206):
+                    return r
+                if r.status_code not in (429, 500, 502, 503, 504):
+                    r.raise_for_status()
+            except requests.RequestException:
+                pass
+            time.sleep(4 * (i + 1))
+        raise OSError(f"range request failed: {self.url} {a}-{b}")
+
+    def readable(self):
+        return True
+
+    def seekable(self):
+        return True
+
+    def tell(self):
+        return self.pos
+
+    def seek(self, off, whence=0):
+        self.pos = off if whence == 0 else self.pos + off if whence == 1 else self.size + off
+        return self.pos
+
+    def read(self, n=-1):
+        if n is None or n < 0:
+            n = self.size - self.pos
+        n = min(n, self.size - self.pos)
+        if n <= 0:
+            return b""
+        s, data = self.buf
+        if s <= self.pos and self.pos + n <= s + len(data):
+            out = data[self.pos - s:self.pos - s + n]
+        elif n >= self.block * 4:
+            out = self._get(self.pos, self.pos + n - 1).content
+        else:
+            m = min(max(n, self.block), self.size - self.pos)
+            data = self._get(self.pos, self.pos + m - 1).content
+            self.buf = (self.pos, data)
+            out = data[:n]
+        self.pos += len(out)
+        return out
+
+    def readinto(self, b):
+        d = self.read(len(b))
+        b[:len(d)] = d
+        return len(d)
