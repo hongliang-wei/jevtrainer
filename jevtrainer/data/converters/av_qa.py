@@ -22,6 +22,8 @@ def _state(question: str) -> dict:
 def avqa(split, cap, rng):
     repo = "juyil/AVQA-videos"
     rows = json.load(open(hf_file(repo, {"train": "train_qa.json", "val": "val_qa.json"}[split]), encoding="utf8"))
+    have = hf_listing(repo, "videos/")
+    rows = [r for r in rows if f"videos/{r['video_name']}.mp4" in have]
     rng.shuffle(rows)
     rows = rows[:cap]
     items = avkit.convert_videos(repo, "avqa", {r["video_name"]: f"videos/{r['video_name']}.mp4" for r in rows}, _WORKERS)
@@ -55,6 +57,8 @@ def music_avqa(split, cap, rng):
         a = str(r["anser"]).strip().lower()
         pool_q[r["question_content"]].add(a)
         pool_t[r["type"]].add(a)
+    have = hf_listing(repo, "videos/")
+    rows = [r for r in rows if f"videos/{r['video_id']}.mp4" in have]
     rng.shuffle(rows)
     rows = rows[:cap]
     items = avkit.convert_videos(repo, "music_avqa", {r["video_id"]: f"videos/{r['video_id']}.mp4" for r in rows}, _WORKERS)
