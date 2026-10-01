@@ -73,6 +73,13 @@ def hf(repo: str, config: str | None = None, split: str = "train", **kw):
     return load_dataset(repo, config, split=split, **kw) if config else load_dataset(repo, split=split, **kw)
 
 
+def hf_file(repo: str, filename: str, repo_type: str = "dataset") -> str:
+    """Path of one file of a hub repo (downloaded once)."""
+    from huggingface_hub import hf_hub_download
+
+    return hf_hub_download(repo, filename, repo_type=repo_type)
+
+
 def take(ds, cap: int, rng: random.Random):
     """Shuffle a HF dataset deterministically and keep at most cap rows."""
     n = len(ds)

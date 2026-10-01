@@ -59,6 +59,56 @@ def fetch(repo: str, name: str | None = None, allow: list[str] | None = None, ig
     return dest
 
 
+def fetch_file(repo: str, filename: str, name: str, repo_type: str = "dataset") -> Path | None:
+    """Download one file into raw/<name>/<filename> (None when it is missing or fails)."""
+    from huggingface_hub import hf_hub_download
+
+    try:
+        return Path(hf_hub_download(repo, filename, repo_type=repo_type, local_dir=str(raw_dir(name))))
+    except Exception:
+        return None
+
+
+def convert_videos(repo: str, name: str, items: dict[str, str], workers: int = 8, delete_raw: bool = True, **kw) -> dict[str, dict]:
+    """Fetch `{key: file in repo}` one by one, turn each into a media item and delete the raw file.
+
+    Runs `workers` fetch+ffmpeg jobs in parallel; returns `{key: media item}` for the ones that worked.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(kv):
+        key, fn = kv
+        out = media_dir(name, key)
+        if (out / "f00.jpg").exists():  # converted by an earlier run
+            files = sorted(out.glob("f*.jpg"))
+            dur = probe_cache(out)
+            item = {"type": "video", "frames": [str(f) for f in files], "fps": len(files) / max(dur, 0.1), "duration": dur}
+            if (out / "a.flac").exists():
+                item["audio"] = str(out / "a.flac")
+            return key, item
+        src = fetch_file(repo, fn, name)
+        if src is None:
+            return key, None
+        try:
+            item = video_item(src, name, key, **kw)
+            if item:
+                (out / "meta.txt").write_text(str(item["duration"]))
+        finally:
+            if delete_raw:
+                src.unlink(missing_ok=True)
+        return key, item
+
+    with ThreadPoolExecutor(workers) as ex:
+        return {k: v for k, v in ex.map(one, items.items()) if v}
+
+
+def probe_cache(out: Path) -> float:
+    try:
+        return float((out / "meta.txt").read_text())
+    except Exception:
+        return 10.0
+
+
 def unzip(archive: Path, dest: Path, members: list[str] | None = None) -> Path:
     import zipfile
 
