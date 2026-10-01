@@ -279,3 +279,28 @@ class RangeFile(io.RawIOBase):
         d = self.read(len(b))
         b[:len(d)] = d
         return len(d)
+
+class RemoteZip:
+    """Thread-safe member reads from a zip on the hub: one Range request per member after reading the central directory."""
+
+    def __init__(self, repo: str, filename: str):
+        import zipfile
+
+        self.rf = RangeFile(repo, filename)
+        with zipfile.ZipFile(self.rf) as z:
+            self.index = {i.filename: (i.header_offset, i.compress_size, i.compress_type) for i in z.infolist() if not i.is_dir()}
+
+    def names(self) -> list[str]:
+        return list(self.index)
+
+    def read(self, name: str) -> bytes:
+        import struct
+        import zlib
+
+        off, size, ctype = self.index[name]
+        raw = self.rf._get(off, off + size + 30 + 600).content
+        n_len, x_len = struct.unpack("<HH", raw[26:30])
+        if 30 + n_len + x_len + size > len(raw):
+            raw = self.rf._get(off, off + 30 + n_len + x_len + size).content
+        data = raw[30 + n_len + x_len:30 + n_len + x_len + size]
+        return zlib.decompress(data, -15) if ctype == 8 else data
