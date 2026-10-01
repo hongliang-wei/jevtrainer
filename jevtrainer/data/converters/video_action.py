@@ -65,10 +65,14 @@ def ssv2(split, cap, rng):
     labels = sorted(set(tmpl.values()))
     quota = -(-cap // len(labels))
     raw = avkit.raw_dir("ssv2") / "videos"
-    parts = sorted(raw.glob("20bn-something-something-v2-[0-9][0-9]"))
-    if not parts:
+    if not list(raw.glob("20bn-something-something-v2-[0-9][0-9]")):
         avkit.fetch(_SSV2, "ssv2", allow=["videos/*"], workers=4)
-        parts = sorted(raw.glob("20bn-something-something-v2-[0-9][0-9]"))
+    parts = []  # the archive is one stream cut into pieces: only a gap-free prefix can be read
+    for i in range(20):
+        p = raw / f"20bn-something-something-v2-{i:02d}"
+        if not p.exists():
+            break
+        parts.append(p)
     seen: dict[str, int] = {}
     total = [0]
 
@@ -81,7 +85,7 @@ def ssv2(split, cap, rng):
         total[0] += 1
         return True
 
-    stream = ((Path(n).stem, n, b) for n, b in vidkit.tar_members(parts, keep))
+    stream = ((Path(n).stem, n, b) for n, b in vidkit.tar_members(parts, keep, done=lambda: total[0] >= cap))
     media = vidkit.convert_stream("ssv2", stream, frames=8, max_side=448, keep_audio=False)
     first = {c.split()[0].lower(): [] for c in labels}
     for c in labels:

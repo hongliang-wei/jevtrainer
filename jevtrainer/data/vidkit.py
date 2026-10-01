@@ -181,7 +181,8 @@ class ConcatReader(io.RawIOBase):
             self.i += 1
 
 
-def tar_members(paths: list[Path], keep: Callable[[str], bool], mode: str = "r|gz", drop: bool = False) -> Iterator[tuple[str, bytes]]:
+def tar_members(paths: list[Path], keep: Callable[[str], bool], mode: str = "r|gz", drop: bool = False,
+                done: Callable[[], bool] | None = None) -> Iterator[tuple[str, bytes]]:
     """(member name, bytes) of the members of a (possibly truncated) tar stream for which keep(name) holds."""
     import zlib
 
