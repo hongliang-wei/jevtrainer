@@ -86,7 +86,7 @@ def vatex_zh(split, cap, rng):
     yield from _emit("vatex_zh", split, rng, [r["videoID"] for r in rows], caps, media, lang_q="哪一句话最准确地描述了这段视频？")
 
 
-register(DatasetSpec("msrvtt", msrvtt, ("train", "val", "test"), _MSR, "other (research)", "video", multimodal=True,
+register(DatasetSpec("msrvtt", msrvtt, ("train", "test"), _MSR, "other (research)", "video", multimodal=True,
                      description="MSR-VTT caption matching: pick the caption of the video among 4"))
 register(DatasetSpec("vatex", vatex, ("train", "val"), _VX, "cc-by-4.0", "video", multimodal=True,
                      description="VATEX English caption matching (4 options)"))
