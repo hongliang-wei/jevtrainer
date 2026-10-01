@@ -93,6 +93,11 @@ class QwenOmniFamily(ModelFamily):
         if ins["audios"]:
             kw["audio"] = ins["audios"]
         out = processor(text=[text], return_tensors="pt", **kw)
+        if out.get("input_features") is not None and out.get("feature_attention_mask") is not None:
+            # the feature extractor pads every clip to 300 s; the audio tower only reads the masked length
+            n = int(out["feature_attention_mask"].sum(-1).max())
+            out["input_features"] = out["input_features"][..., :n].contiguous()
+            out["feature_attention_mask"] = out["feature_attention_mask"][..., :n].contiguous()
         out["use_audio_in_video"] = torch.tensor([int(use_audio_in_video)])
         return out
 
