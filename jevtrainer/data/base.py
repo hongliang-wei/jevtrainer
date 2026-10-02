@@ -53,7 +53,7 @@ def load(name: str, split: str = "train", max_samples: int | None = None, seed: 
         # JT_VIDEO_FPS=1: video / audio-video sets are converted at that frame rate into their own cache files
         # (`...-fps1.jsonl`, frames under media_fps1/); JT_VIDEO_FPS_STRICT=1 never falls back to the old 8-frame files.
         fps = os.environ.get("JT_VIDEO_FPS") if spec.area in ("video", "av") else None
-        tag = f"-fps{fps}" if fps else ""
+        tag = f"-fps{fps}{os.environ.get('JT_RECORD_SUFFIX', '')}" if fps else ""  # suffix: a separate, larger build
         path = cache_dir() / "records" / name / f"{split}-cap{cap}-v{spec.version}{tag}.jsonl"
         if not path.exists():  # converted earlier with another cap: reuse it instead of downloading everything again
             allf = sorted(path.parent.glob(f"{split}-cap*-v*.jsonl"), key=lambda p: p.stat().st_mtime)
