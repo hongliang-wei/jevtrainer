@@ -39,7 +39,7 @@ def window_record(id, media, query, dur, gold, avoid, rng, **meta):
     for _ in range(400):
         s = rng.uniform(0, dur - length)
         w = (s, s + length)
-        if any(_overlap(w, a) > 0 for a in avoid) or any(_iou(w, x) > 0.2 for x in wins):
+        if any(_overlap(w, a) > 0 for a in avoid) or any(_iou(w, x) > 0.4 for x in wins):
             continue
         wins.append(w)
         if len(wins) == 4:
@@ -119,7 +119,7 @@ def charades_sta(split, cap, rng):
         dur = m["duration"]
         s, e = r["time"]
         rec = window_record(rid("charades_sta", split, v), m, r["cog_desc"].strip(), dur, (s, min(e, dur)),
-                            [(a["time"][0], a["time"][1]) for a in by[v]], rng, dataset="charades_sta")
+                            [(s, e)], rng, dataset="charades_sta")
         if rec:
             yield rec
 
