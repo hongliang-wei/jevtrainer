@@ -46,7 +46,18 @@ def listing(repo: str, prefix: str = "") -> set[str]:
     if cache.exists():
         files = json.loads(cache.read_text())
     else:
-        files = retry(lambda: HfApi().list_repo_files(repo, repo_type="dataset"), tries=24, wait=15)
+        def list_any():
+            try:
+                return HfApi().list_repo_files(repo, repo_type="dataset")
+            except Exception:  # 429, or the mirror cuts the JSON of a big repo short: list folder by folder / via repo info
+                from jevtrainer.data import avkit
+
+                try:
+                    return avkit.walk_repo_files(repo)
+                except Exception:
+                    return [s.rfilename for s in HfApi().dataset_info(repo).siblings]
+
+        files = retry(list_any, tries=24, wait=15)
         cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text(json.dumps(files))
     return {f for f in files if f.startswith(prefix)}
