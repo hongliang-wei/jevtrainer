@@ -85,7 +85,9 @@ def http_text(url: str, name: str, filename: str) -> str:
     p = avkit.raw_dir(name) / filename
     if not p.exists() or p.stat().st_size == 0:
         data = retry(lambda: urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "jevtrainer"}), timeout=60).read())
-        p.write_bytes(data)
+        tmp = p.with_suffix(p.suffix + f".{os.getpid()}.tmp")
+        tmp.write_bytes(data)
+        tmp.replace(p)  # atomic: concurrent builds never see a half-written file
     return p.read_text(encoding="utf8")
 
 
