@@ -244,18 +244,31 @@ def audio_from_bytes(data: bytes, name: str, key: str, max_s: float = 30.0) -> d
 
 def parquet_files(repo: str, prefix: str = "", suffix: str = ".parquet") -> list[str]:
     """Sorted parquet file names of a hub dataset repo that start with `prefix`."""
+    import json
     import time
 
     from huggingface_hub import HfApi
 
-    for attempt in range(6):  # the hub mirror rate-limits listings now and then
+    cache = cache_dir() / "listings" / (repo.replace("/", "__") + ".json")  # the mirror's rate limit hits listings hardest
+    names = None
+    if cache.exists():
         try:
-            names = HfApi().list_repo_files(repo, repo_type="dataset")
-            break
+            names = json.loads(cache.read_text())
         except Exception:
-            if attempt == 5:
-                raise
-            time.sleep(15 * (attempt + 1))
+            names = None
+    if names is None:
+        for attempt in range(10):  # the hub mirror rate-limits listings now and then
+            try:
+                names = HfApi().list_repo_files(repo, repo_type="dataset")
+                break
+            except Exception:
+                if attempt == 9:
+                    raise
+                time.sleep(15 * (attempt + 1))
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        tmp = cache.with_suffix(f".{os.getpid()}.tmp")
+        tmp.write_text(json.dumps(names))
+        tmp.replace(cache)
     return sorted(f for f in names if f.startswith(prefix) and f.endswith(suffix))
 
 
