@@ -11,7 +11,7 @@ AMI  (edinburghcstr/ami, config `ihm` = individual headset mics, cc-by-4.0)  -- 
                       is the annotated gender.
 
 VoxConverse  (diarizers-community/voxconverse, cc-by-4.0)  -- audio only, news / debate recordings with diarization labels
-    train = dev shards 0-1, val = dev shard 4, test = test shard 0. Every ~6 min row yields up to 5 random 30 s windows;
+    train = dev shards 0-3, val = dev shard 4, test = test shard 0. Every ~6 min row yields up to 5 random 30 s windows;
     labels are computed from the diarization segments clipped to the window.
     voxconverse_speakers  4-way choice: number of people speaking at least 1 s in the window (1, 2, 3, 4 or more)
     voxconverse_overlap   yes/no: two or more people talk at the same time. yes = at least 1.0 s of overlapped speech,
@@ -117,7 +117,7 @@ def ami_gender(split, cap, rng):
 # ---- VoxConverse -----------------------------------------------------------------------------------------------------------
 _VOX = "diarizers-community/voxconverse"
 _VOX_SHARDS = {
-    "train": [f"data/dev-{i:05d}-of-00005.parquet" for i in range(2)],
+    "train": [f"data/dev-{i:05d}-of-00005.parquet" for i in range(4)],  # dev shards 0-3 (4 is val): ~850 windows
     "val": ["data/dev-00004-of-00005.parquet"],
     "test": ["data/test-00000-of-00011.parquet"],
 }
