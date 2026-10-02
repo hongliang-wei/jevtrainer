@@ -95,6 +95,7 @@ def main():
         "model": "Qwen/Qwen2.5-Omni-3B",
         "readout": "marker",
         "readout_options": {"video_frames": 8, "frame_max_side": 448, "audio_max_s": 30, "use_audio_in_video": True,
+                            "image_pixel_budget": 1000000,  # total pixels over a record's images (OneJev multi-screenshot rows)
                             **({"video_fps": a.video_fps, "video_max_frames": 32} if a.video_fps else {})},
         "finetune": "lora",
         "lora": {"r": 32, "alpha": 64},
@@ -105,8 +106,8 @@ def main():
         "lr": 1.0e-4,
         "weight_decay": 0.01,
         "warmup_ratio": 0.03,
-        "batch_size": 2,
-        "grad_accum": 16,
+        "batch_size": 1,
+        "grad_accum": 32,
         "max_state_tokens": 4096,
         "max_length": 6144,
         "num_workers": 6,
