@@ -76,7 +76,8 @@ class Trainer:
         if c.exclude_eval_overlap:
             for name in dict.fromkeys(c.eval_dataset + c.exclude):
                 exclude.extend(benchmark_records(name))
-        sources = [Source(s.name, s.split, s.max_samples or c.max_samples, s.weight) for s in c.dataset]
+        sources = [Source(s.name, s.split, s.max_samples or c.max_samples, s.weight, s.group_by, s.per_group, s.repeat_to)
+                   for s in c.dataset]
         records, report = build_mixture(sources, c.seed, exclude)
         train, hold = split_holdout(records, c.holdout, c.seed)
         return train, hold, report

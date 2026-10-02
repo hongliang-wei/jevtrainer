@@ -19,6 +19,9 @@ class Source:
     split: str = "train"
     max_samples: int | None = None
     weight: float = 1.0
+    group_by: str | None = None  # meta key that splits the source into tasks (e.g. "question_type")
+    per_group: int | None = None  # cap per task, so each task contributes about the same
+    repeat_to: int | None = None  # a source (or task) smaller than this is repeated, at most 3x
 
 
 def _norm(text: str) -> str:
@@ -84,6 +87,28 @@ def check_trainable(name: str) -> None:
         raise ValueError(f"dataset '{name}' is eval_only and cannot be used for training")
 
 
+def repeat_up(rs: list[Record], n: int, max_factor: int = 3) -> list[Record]:
+    """Repeat a small group cyclically up to n records (never more than max_factor copies)."""
+    n = min(n, len(rs) * max_factor)
+    return [rs[i % len(rs)] for i in range(n)]
+
+
+def balance_tasks(rs: list[Record], key: str, per_group: int | None, repeat_to: int | None, rng: random.Random) -> tuple[list[Record], dict]:
+    """Split by meta[key]; each task gets at most per_group records (random), small ones are repeated up to repeat_to."""
+    groups: dict[str, list[Record]] = {}
+    for r in rs:
+        groups.setdefault(str(r.meta.get(key)), []).append(r)
+    out, tasks = [], {}
+    for g, items in sorted(groups.items()):
+        if per_group and len(items) > per_group:
+            items = rng.sample(items, per_group)
+        elif repeat_to and len(items) < repeat_to:
+            items = repeat_up(items, repeat_to)
+        tasks[g] = len(items)
+        out.extend(items)
+    return out, tasks
+
+
 def build_mixture(sources: list[Source], seed: int = 0, exclude: list[Record] | None = None) -> tuple[list[Record], dict]:
     """Returns (records, report). `exclude` records (the eval sets) are removed by normalised state."""
     banned = set().union(*(state_keys(r) for r in exclude)) if exclude else set()
@@ -91,9 +116,16 @@ def build_mixture(sources: list[Source], seed: int = 0, exclude: list[Record] | 
     records, report = [], {}
     for s in sources:
         check_trainable(s.name)
-        rs = load(s.name, s.split, s.max_samples, seed)
+        rs = load(s.name, s.split, None if s.group_by else s.max_samples, seed)
         kept = [r for r in rs if not (state_keys(r) & banned)]
         removed = len(rs) - len(kept)
+        if s.group_by:
+            kept, tasks = balance_tasks(kept, s.group_by, s.per_group, s.repeat_to, rng)
+            if s.max_samples and len(kept) > s.max_samples:
+                kept = rng.sample(kept, s.max_samples)
+            report[s.name + "#tasks"] = tasks
+        elif s.repeat_to and 0 < len(kept) < s.repeat_to:
+            kept = repeat_up(kept, s.repeat_to)
         if s.weight != 1.0 and kept:
             n = int(round(len(kept) * s.weight))
             kept = [kept[i % len(kept)] for i in range(n)] if n > len(kept) else rng.sample(kept, n)

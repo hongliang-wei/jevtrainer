@@ -44,6 +44,9 @@ class SourceCfg(Strict):
     split: str = "train"
     max_samples: int | None = None
     weight: float = 1.0
+    group_by: str | None = None  # meta key that splits the source into tasks, e.g. question_type
+    per_group: int | None = None  # records per task (random subset), so tasks weigh the same
+    repeat_to: int | None = None  # tasks / sources smaller than this are repeated (at most 3x)
 
 
 def _sources(v: Any) -> list[dict]:
