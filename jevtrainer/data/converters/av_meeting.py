@@ -82,7 +82,7 @@ def ami_same_speaker(split, cap, rng):
     for u in pool:
         by_meeting[u["meeting"]].append(u)
     for a in pool:
-        positive = hash_bucket("ami_pair", a["id"], 2) == 0
+        positive = hash_bucket("ami_pair", a["id"], mod=2) == 0
         same = [u for u in by_meeting[a["meeting"]] if u["spk"] == a["spk"] and u["id"] != a["id"]]
         diff = [u for u in by_meeting[a["meeting"]] if u["spk"] != a["spk"]]
         partners = same if positive else diff
