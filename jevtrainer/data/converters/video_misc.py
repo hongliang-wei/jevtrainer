@@ -23,7 +23,7 @@ from jevtrainer.data.base import DatasetSpec, mcq_record, register, rid
 
 _VITE = "yankie123/tea-m4vitevqa"
 _VITE_FILES = {"train": "t1s1train", "val": "t1s1val", "test": "t1s1test"}
-_VITE_N = {"train": int(os.environ.get("JEVTRAINER_VITE_TRAIN", "900")), "val": 200, "test": int(os.environ.get("JEVTRAINER_VITE_TEST", "500"))}
+_VITE_N = {"train": int(os.environ.get("JEVTRAINER_VITE_TRAIN", "600")), "val": 150, "test": int(os.environ.get("JEVTRAINER_VITE_TEST", "300"))}
 _VITE_STRIDE = 2  # keep every 2nd of the 10 stored frames
 _VITE_STEP_S = 32 / 30.0  # frames are 16 apart; stride 2 -> 32 frames, taken as 30 fps footage
 _Q_VITE = "Which option correctly answers the question about the text or events in this video?"
@@ -88,7 +88,7 @@ def m4_vitevqa(split, cap, rng):
             print(f"[m4_vitevqa] {v}: {type(e).__name__}: {str(e)[:80]}", flush=True)
             return v, None
 
-    with ThreadPoolExecutor(6) as ex:
+    with ThreadPoolExecutor(int(os.environ.get("JEVTRAINER_VITE_THREADS", "4"))) as ex:
         for v, item in ex.map(one, vids):
             if item:
                 got[v] = item
@@ -100,8 +100,10 @@ def m4_vitevqa(split, cap, rng):
         gold = Counter(a.strip() for a in r["answers"]).most_common(1)[0][0]
         same = sorted({Counter(a.strip() for a in x["answers"]).most_common(1)[0][0] for x in rs if x is not r} - {gold})
         near = same[:3]
-        rest = [a for a in rng.sample(pool, min(len(pool), 40)) if a != gold and a not in near and a.lower() != gold.lower()]
-        options = [gold, *near, *rest][:4]
+        gw = len(gold.split())
+        cand = [a for a in rng.sample(pool, min(len(pool), 300)) if a.lower() != gold.lower() and a not in near]
+        cand.sort(key=lambda a: abs(len(a.split()) - gw) + 2 * (a.replace(",", "").replace(".", "").isdigit() != gold.replace(",", "").replace(".", "").isdigit()))
+        options = [gold, *near, *cand][:4]
         if len(options) < 4:
             continue
         order = list(range(4))
