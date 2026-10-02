@@ -34,9 +34,22 @@ def retry(fn: Callable, tries: int = 6, wait: float = 8.0):
 
 
 def listing(repo: str, prefix: str = "") -> set[str]:
+    """File names of a dataset repo starting with prefix; the full listing is cached on disk (listings are what the
+    mirror rate-limits hardest)."""
+    import json
+
     from huggingface_hub import HfApi
 
-    return {f for f in retry(lambda: HfApi().list_repo_files(repo, repo_type="dataset")) if f.startswith(prefix)}
+    from jevtrainer.data.base import cache_dir
+
+    cache = cache_dir() / "listings" / (repo.replace("/", "__") + ".json")
+    if cache.exists():
+        files = json.loads(cache.read_text())
+    else:
+        files = retry(lambda: HfApi().list_repo_files(repo, repo_type="dataset"), tries=10, wait=15)
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(files))
+    return {f for f in files if f.startswith(prefix)}
 
 
 def get_file(repo: str, filename: str) -> str:
@@ -217,6 +230,8 @@ def tar_members(paths: list[Path], keep: Callable[[str], bool], mode: str = "r|g
     try:
         with tarfile.open(fileobj=reader, mode=mode) as tf:
             for m in tf:
+                if done is not None and done():
+                    return
                 if m.isfile() and keep(m.name):
                     f = tf.extractfile(m)
                     if f is not None:

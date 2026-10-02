@@ -33,10 +33,10 @@ _MSR = "VLM2Vec/MSR-VTT"
 
 
 def msrvtt(split, cap, rng):
-    """MSR-VTT (10k web videos, 20 captions each): official train / validate / test lists -> train / val / test."""
+    """MSR-VTT (10k web videos, 20 captions each): the standard 9k-train / 1k-test (JSFUSION) video lists."""
     data = vidkit.read_json(_MSR, "raw_data/MSRVTT_data.json")
-    want = {"train": "train", "val": "validate", "test": "test"}[split]
-    vids = [v["video_id"] for v in data["videos"] if v["split"] == want]
+    lst = vidkit.read_csv(_MSR, "raw_data/MSRVTT_train.9k.csv" if split == "train" else "raw_data/MSRVTT_JSFUSION_test.csv")
+    vids = [str(v) for v in lst["video_id"]]
     caps = defaultdict(list)
     for s in data["sentences"]:
         caps[s["video_id"]].append(s["caption"])
