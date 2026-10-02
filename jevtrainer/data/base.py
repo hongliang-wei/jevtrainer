@@ -52,7 +52,7 @@ def load(name: str, split: str = "train", max_samples: int | None = None, seed: 
             raise ValueError(f"dataset '{name}' has no split '{split}' (has {spec.splits})")
         path = cache_dir() / "records" / name / f"{split}-cap{cap}-v{spec.version}.jsonl"
         if not path.exists():  # converted earlier with another cap: reuse it instead of downloading everything again
-            older = sorted(path.parent.glob(f"{split}-cap*-v{spec.version}.jsonl"), key=lambda p: p.stat().st_mtime)
+            older = sorted(path.parent.glob(f"{split}-cap*-v*.jsonl"), key=lambda p: p.stat().st_mtime)
             if older:
                 path = older[-1]
         if not path.exists():
