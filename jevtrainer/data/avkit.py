@@ -262,7 +262,8 @@ def parquet_files(repo: str, prefix: str = "", suffix: str = ".parquet") -> list
 def parquet_rows(repo: str, files: list[str], columns: list[str], workers: int = 4) -> list[dict]:
     """Rows of the given (non-audio) columns of remote parquet files, read by range requests (no full download).
 
-    Every row gets `_file` (its path in the repo) and `_i` (its index in that file) so that `parquet_audio` can find it.
+    Every row gets `_file` (its path in the repo), `_i` (its index in that file) and `_rg` (its row group) so that
+    `parquet_audio` can find it.
     """
     from concurrent.futures import ThreadPoolExecutor
 
@@ -275,7 +276,10 @@ def parquet_rows(repo: str, files: list[str], columns: list[str], workers: int =
         for attempt in range(3):
             try:
                 with fs.open(f"datasets/{repo}/{fn}") as f:
-                    rows = pq.read_table(f, columns=columns).to_pylist()
+                    pf = pq.ParquetFile(f)
+                    sizes = [pf.metadata.row_group(k).num_rows for k in range(pf.num_row_groups)]
+                    rows = pf.read(columns=columns).to_pylist()
+                groups = [k for k, n in enumerate(sizes) for _ in range(n)]
                 break
             except Exception:
                 if attempt == 2:
@@ -284,7 +288,7 @@ def parquet_rows(repo: str, files: list[str], columns: list[str], workers: int =
 
                 time.sleep(10 * (attempt + 1))
         for i, r in enumerate(rows):
-            r["_file"], r["_i"] = fn, i
+            r["_file"], r["_i"], r["_rg"] = fn, i, groups[i]
         return rows
 
     with ThreadPoolExecutor(max(1, min(workers, 8))) as ex:
@@ -292,10 +296,12 @@ def parquet_rows(repo: str, files: list[str], columns: list[str], workers: int =
 
 
 def parquet_audio(repo: str, rows: list[dict], name: str, key_of, audio_col: str = "audio", max_s: float = 30.0,
-                  shards: int = 4, decoders: int = 2) -> list[dict | None]:
+                  shards: int = 4, decoders: int = 2, remote: bool = False) -> list[dict | None]:
     """Media items (aligned with `rows`) for rows found by `parquet_rows`.
 
     Each shard that holds a wanted row is downloaded, its wanted rows decoded to FLAC, and the shard deleted again.
+    With `remote=True` only the row groups that hold a wanted row are fetched (range requests; use it for shards that are
+    much bigger than the part you need, e.g. when taking 200 clips out of every one of 100 languages).
     """
     from collections import defaultdict
     from concurrent.futures import ThreadPoolExecutor
@@ -316,6 +322,30 @@ def parquet_audio(repo: str, rows: list[dict], name: str, key_of, audio_col: str
         except Exception:
             return pos, None
 
+    def shard_remote(item):
+        from huggingface_hub import HfFileSystem
+
+        fn, want = item
+        for attempt in range(3):
+            try:
+                with HfFileSystem().open(f"datasets/{repo}/{fn}") as f:
+                    pf = pq.ParquetFile(f)
+                    offset = 0
+                    with ThreadPoolExecutor(decoders) as ex:
+                        for g in range(pf.num_row_groups):
+                            n = pf.metadata.row_group(g).num_rows
+                            hit = [i for i in want if offset <= i < offset + n]
+                            if hit:
+                                col = pf.read_row_group(g, columns=[audio_col]).column(0).to_pylist()
+                                for pos, m in ex.map(decode, [(want[i], col[i - offset]) for i in hit]):
+                                    out[pos] = m
+                            offset += n
+                return
+            except Exception:
+                import time
+
+                time.sleep(10 * (attempt + 1))
+
     def shard(item):
         fn, want = item
         src = fetch_file(repo, fn, name)
@@ -335,7 +365,7 @@ def parquet_audio(repo: str, rows: list[dict], name: str, key_of, audio_col: str
                 src.unlink(missing_ok=True)
 
     with ThreadPoolExecutor(max(1, min(shards, 4))) as ex:
-        list(ex.map(shard, by_file.items()))
+        list(ex.map(shard_remote if remote else shard, by_file.items()))
     return out
 
 
@@ -391,6 +421,13 @@ def audio_mcq(id: str, media: dict, question: str, gold: str, pool: list[str], r
     return rec
 
 
+def use_remote(rows: list[dict], picked: list[dict]) -> bool:
+    """True when the picked rows sit in less than half of the row groups: then range requests beat downloading shards."""
+    total = {(r["_file"], r["_rg"]) for r in rows}
+    hit = {(r["_file"], r["_rg"]) for r in picked}
+    return len(hit) < 0.5 * len(total)
+
+
 def clip_choice(name: str, split: str, cap: int, rng, repo: str, files: list[str], columns: list[str], label_of, question: str,
                 key_of, pool: list[str] | None = None, n_opts: int = 4, max_s: float = 30.0, keep=None, meta_of=None,
                 balance: bool = True, audio_col: str = "audio", instructions: str = AUDIO_Q, group_of=None):
@@ -406,7 +443,8 @@ def clip_choice(name: str, split: str, cap: int, rng, repo: str, files: list[str
     default_pool = sorted({r["_y"] for r in rows})
     rng.shuffle(rows)
     picked = balanced(rows, group_of or (lambda r: r["_y"]), cap, rng) if balance else rows[:cap]
-    media = parquet_audio(repo, picked, name, lambda r: rid_(name, split, key_of(r)), audio_col, max_s)
+    media = parquet_audio(repo, picked, name, lambda r: rid_(name, split, key_of(r)), audio_col, max_s,
+                          remote=use_remote(rows, picked))
     for r, m in zip(picked, media):
         if not m:
             continue
@@ -421,3 +459,33 @@ def rid_(*parts) -> str:
     from jevtrainer.data.base import rid
 
     return rid(*parts)
+
+
+def audio_choice(id: str, media: dict, question: str, criteria: dict[str, str], label: str, instructions: str = AUDIO_Q,
+                 state_extra: dict | None = None, **meta):
+    """One audio clip, one question, a fixed label set (`criteria`: label -> description of what that label means)."""
+    from jevtrainer.data.base import choice_record
+
+    rec = choice_record(id, audio_state(question, **(state_extra or {})), instructions, dict(criteria), label, area="audio", **meta)
+    rec.media = [media]
+    return rec
+
+
+def audio_noul(id: str, media: dict, question: str, yes: bool, true: str = "", false: str = "", state_extra: dict | None = None,
+               **meta):
+    """One audio clip, one yes/no question."""
+    from jevtrainer.data.base import noul_record
+
+    rec = noul_record(id, audio_state(question, **(state_extra or {})), question, yes, true, false, area="audio", **meta)
+    rec.media = [media]
+    return rec
+
+
+def tar_members(path: Path, suffixes: tuple[str, ...] = (".wav", ".flac", ".mp3", ".ogg")):
+    """Stream (member name, bytes) of the audio files of a .tar / .tar.gz without extracting it."""
+    import tarfile
+
+    with tarfile.open(path, "r|*") as t:
+        for m in t:
+            if m.isfile() and m.name.lower().endswith(suffixes):
+                yield m.name, t.extractfile(m).read()
