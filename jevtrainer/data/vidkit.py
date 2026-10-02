@@ -30,7 +30,7 @@ def retry(fn: Callable, tries: int = 6, wait: float = 8.0):
         except Exception as e:  # noqa: BLE001
             if i == tries - 1 or not any(s in str(e) for s in ("429", "Too Many", "timed out", "Timeout", "Connection")):
                 raise
-            time.sleep(wait * (i + 1))
+            time.sleep(min(wait * (i + 1), 120.0) * (0.5 + (os.getpid() % 10) / 10))  # capped, jittered: many builds share one IP
 
 
 def listing(repo: str, prefix: str = "") -> set[str]:
@@ -46,7 +46,7 @@ def listing(repo: str, prefix: str = "") -> set[str]:
     if cache.exists():
         files = json.loads(cache.read_text())
     else:
-        files = retry(lambda: HfApi().list_repo_files(repo, repo_type="dataset"), tries=10, wait=15)
+        files = retry(lambda: HfApi().list_repo_files(repo, repo_type="dataset"), tries=24, wait=15)
         cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text(json.dumps(files))
     return {f for f in files if f.startswith(prefix)}
