@@ -58,8 +58,7 @@ def main():
 
     skip = {s for s in a.exclude.split(",") if s}
     sources, rows = [], []
-    for name in sorted(DATASETS.keys()):
-        spec = DATASETS.get(name)
+    for name, spec in sorted(DATASETS.items()):
         if spec.eval_only or name in skip or name.endswith("_val_only"):
             continue
         p = newest(name, "train")
