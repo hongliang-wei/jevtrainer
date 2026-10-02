@@ -262,6 +262,11 @@ def parquet_files(repo: str, prefix: str = "", suffix: str = ".parquet") -> list
                 names = HfApi().list_repo_files(repo, repo_type="dataset")
                 break
             except Exception:
+                try:  # the repo-info endpoint is not throttled like the recursive tree one
+                    names = [s.rfilename for s in HfApi().dataset_info(repo).siblings]
+                    break
+                except Exception:
+                    pass
                 if attempt == 9:
                     raise
                 time.sleep(15 * (attempt + 1))
