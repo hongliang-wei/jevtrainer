@@ -98,26 +98,34 @@ def convert_tar_videos(archive: Path, name: str, wanted: dict, workers: int = 8,
         finally:
             sem.release()
 
+    import zlib
+
     with ThreadPoolExecutor(workers) as ex, tarfile.open(archive, "r|*") as t:
-        for m in t:
-            if not m.isfile():
-                continue
-            w = wanted.get(os.path.basename(m.name) if by_basename else m.name)
-            if w is None:
-                continue
-            key, okw = w
-            c = cached_item(name, key)
-            if c:
-                done[key] = c
-                continue
-            dst = tmp / f"{key}{Path(m.name).suffix}"
-            src = t.extractfile(m)
-            if src is None:
-                continue
-            with open(dst, "wb") as d:
-                shutil.copyfileobj(src, d, 1 << 20)
-            sem.acquire()
-            futs.append(ex.submit(job, dst, key, okw))
+        dst = None
+        try:  # a deliberately truncated download ends in the middle of a member: keep what was read
+            for m in t:
+                if not m.isfile():
+                    continue
+                w = wanted.get(os.path.basename(m.name) if by_basename else m.name)
+                if w is None:
+                    continue
+                key, okw = w
+                c = cached_item(name, key)
+                if c:
+                    done[key] = c
+                    continue
+                dst = tmp / f"{key}{Path(m.name).suffix}"
+                src = t.extractfile(m)
+                if src is None:
+                    continue
+                with open(dst, "wb") as d:
+                    shutil.copyfileobj(src, d, 1 << 20)
+                sem.acquire()
+                futs.append(ex.submit(job, dst, key, okw))
+                dst = None
+        except (EOFError, tarfile.ReadError, zlib.error, OSError):
+            if dst is not None:
+                dst.unlink(missing_ok=True)
         for f in futs:
             k, v = f.result()
             if v:
@@ -147,8 +155,12 @@ def balanced_take(rows: list, key, cap: int, rng) -> list:
 
 
 # ---- big files: several connections on one file ----------------------------------------------------------
-def fetch_ranged(repo: str, filename: str, name: str, conns: int = 8, chunk: int = 16 << 20, repo_type: str = "dataset") -> Path | None:
+def fetch_ranged(repo: str, filename: str, name: str, conns: int = 8, chunk: int = 16 << 20, repo_type: str = "dataset",
+                 max_bytes: int | None = None) -> Path | None:
     """Download one big hub file with `conns` parallel range requests (resumable; falls back to a plain download).
+
+    `max_bytes`: keep only the first `max_bytes` of the file (a truncated .tar.gz still streams, see `convert_tar_videos`;
+    the clips of the shipped tars are in random order, so the prefix is a random subset).
 
     The mirror serves a single connection at a few hundred KB/s, so one multi-GB archive is only practical this way.
     Chunks already on disk (listed in `<file>.done`) are skipped after an interruption.
@@ -162,6 +174,8 @@ def fetch_ranged(repo: str, filename: str, name: str, conns: int = 8, chunk: int
     try:
         url = hf_hub_url(repo, filename, repo_type=repo_type)
         size = int(get_hf_file_metadata(url).size)
+        if max_bytes:
+            size = min(size, int(max_bytes))
     except Exception:
         return avkit.fetch_file(repo, filename, name, repo_type)
     dest = avkit.raw_dir(name) / filename

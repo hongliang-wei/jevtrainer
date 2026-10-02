@@ -1,6 +1,6 @@
 """Affect, intent and speaking style in short talking-head / sitcom clips (video + voice + transcript).
 
-All clips come as tar archives of the MMLA collection (THUIAR/MMLA-Datasets, cc-by-4.0): one pass over the archive
+Clips come as tar archives of the MMLA collection (THUIAR/MMLA-Datasets, cc-by-4.0): one pass over the archive
 converts every clip of every split, the archive is then deleted. Official train / dev / test lists give the splits
 (dev is registered as `val`). The transcript of the utterance is part of the state next to the clip.
 
@@ -12,8 +12,8 @@ converts every clip of every split, the archive is then deleted. Official train 
     chsims2    CH-SIMS v2 (Chinese)  sentiment score of the speaker, 5 levels from the annotated multimodal score in [-1, 1]
                                      (<= -0.8 / -0.6..-0.2 / 0 / 0.2..0.6 / >= 0.8), labels from tamb2203579/CH-SIMSv2 meta.csv
     cmu_mosei  CMU-MOSEI             sentiment score -3..3 (score, 7 levels; mean annotator score rounded). Clips are read
-                                     from the raw zip member by member; train is class-balanced and capped (6000), val 600,
-                                     test 1500 (random, natural distribution).
+                                     from the raw zip member by member; train is class-balanced and capped (3000), val 300,
+                                     test 800 (random, natural distribution).
 """
 
 from __future__ import annotations
@@ -29,6 +29,8 @@ _WORKERS = int(os.environ.get("JEVTRAINER_AV_WORKERS", "8"))  # parallel ffmpeg 
 _CONNS = int(os.environ.get("JEVTRAINER_AV_CONNS", "4"))  # parallel range requests per big file
 _MMLA = "THUIAR/MMLA-Datasets"
 _SPLIT_FILE = {"train": "train", "val": "dev", "test": "test"}
+# The download from the mirror is slow; the clips in these tars are in random order, so a prefix of the archive is a random subset.
+_MAX_GB = {"meld": float(os.environ.get("JEVTRAINER_MELD_GB", "5")), "mintrec": 1.5, "chsims2": float(os.environ.get("JEVTRAINER_CHSIMS_GB", "4"))}
 
 
 def _tsv(folder: str, split: str) -> list[dict]:
@@ -38,12 +40,12 @@ def _tsv(folder: str, split: str) -> list[dict]:
     return [{"id": r.id.strip(), "text": r.text.strip(), "label": r.label.strip()} for r in d.itertuples()]
 
 
-def _mmla_clips(name: str, folder: str, tar: str, prefix: str, wanted_ids: list[str]) -> None:
+def _mmla_clips(name: str, folder: str, tar: str, prefix: str, wanted_ids: list[str], max_gb: float | None = None) -> None:
     """Convert every wanted clip of an MMLA video tar once (marker file), then delete the archive."""
     mark = avkit.media_dir(name, "_done") / "ok"
     if mark.exists():
         return
-    path = fetch_ranged(_MMLA, f"{folder}/{tar}", name, conns=_CONNS)
+    path = fetch_ranged(_MMLA, f"{folder}/{tar}", name, conns=_CONNS, max_bytes=int(max_gb * 1e9) if max_gb else None)
     if path is None:
         raise RuntimeError(f"cannot download {folder}/{tar}")
     convert_tar_videos(path, name, {f"{prefix}{i}.mp4": i for i in wanted_ids}, _WORKERS, frames=8)
@@ -55,9 +57,9 @@ def _all_ids(folder: str) -> list[str]:
     return sorted({r["id"] for s in _SPLIT_FILE for r in _tsv(folder, s)})
 
 
-def _clips(name: str, folder: str, tar: str, prefix: str, split: str, cap: int, rng, keep=None) -> list[tuple[dict, dict]]:
+def _clips(name: str, folder: str, tar: str, prefix: str, split: str, cap: int, rng, keep=None, max_gb: float | None = None) -> list[tuple[dict, dict]]:
     """(row, media item) pairs of a split, shuffled, at most `cap` of them (class-balanced when the cap bites)."""
-    _mmla_clips(name, folder, tar, prefix, _all_ids(folder))
+    _mmla_clips(name, folder, tar, prefix, _all_ids(folder), max_gb)
     rows = [r for r in _tsv(folder, split) if keep is None or keep(r)]
     rng.shuffle(rows)
     pairs = [(r, m) for r, m in ((r, cached_item(name, r["id"])) for r in rows) if m]
@@ -80,7 +82,8 @@ EMOTIONS = {
 
 
 def meld(split, cap, rng):
-    for r, media in _clips("meld", "MELD", "MELD_video.tar.gz", "MELD_", split, cap, rng, keep=lambda r: r["label"] in EMOTIONS):
+    for r, media in _clips("meld", "MELD", "MELD_video.tar.gz", "MELD_", split, cap, rng, keep=lambda r: r["label"] in EMOTIONS,
+                           max_gb=_MAX_GB["meld"]):
         rec = choice_record(rid("meld", split, r["id"]), _state(r),
                             "Watch and listen to the clip (face, voice and words). Which emotion does the speaker express?",
                             dict(EMOTIONS), r["label"], area="av")
@@ -139,7 +142,8 @@ INTENTS = {
 
 def mintrec(split, cap, rng):
     keys = {k: k.replace(" ", "_") for k in INTENTS}
-    for r, media in _clips("mintrec", "MIntRec", "MIntRec_video.tar.gz", "MIntRec_", split, cap, rng, keep=lambda r: r["label"] in INTENTS):
+    for r, media in _clips("mintrec", "MIntRec", "MIntRec_video.tar.gz", "MIntRec_", split, cap, rng, keep=lambda r: r["label"] in INTENTS,
+                           max_gb=_MAX_GB["mintrec"]):
         rec = choice_record(rid("mintrec", split, r["id"]), _state(r),
                             "Watch and listen to the clip. What is the speaker's intent in this utterance?",
                             {keys[k]: v for k, v in INTENTS.items()}, keys[r["label"]], area="av")
@@ -164,7 +168,7 @@ def chsims2(split, cap, rng):
     mode = {"train": "train", "val": "valid", "test": "test"}
     mark = avkit.media_dir("chsims2", "_done") / "ok"
     if not mark.exists():
-        path = fetch_ranged(_MMLA, "CH-SIMSv2.0/Ch-simsv2_video.tar.gz", "chsims2", conns=_CONNS)
+        path = fetch_ranged(_MMLA, "CH-SIMSv2.0/Ch-simsv2_video.tar.gz", "chsims2", conns=_CONNS, max_bytes=int(_MAX_GB["chsims2"] * 1e9))
         if path is None:
             raise RuntimeError("cannot download CH-SIMS v2 videos")
         convert_tar_videos(path, "chsims2", {f"Ch-sims_{i}.mp4": i for i in meta.id}, _WORKERS, frames=8)
@@ -184,7 +188,7 @@ def chsims2(split, cap, rng):
 # ---- CMU-MOSEI ---------------------------------------------------------------------------------------------------
 MOSEI_LEVELS_EN = ["-3: highly negative", "-2: negative", "-1: slightly negative", "0: neutral", "+1: slightly positive",
                    "+2: positive", "+3: highly positive"]
-_MOSEI_N = {"train": 6000, "val": 600, "test": 1500}
+_MOSEI_N = {"train": 3000, "val": 300, "test": 800}
 
 
 def cmu_mosei(split, cap, rng):

@@ -2,7 +2,7 @@
 
 The repo stores 4,750 untrimmed videos (3,950 train / 800 test) whose file names carry the video-level labels
 (`..._label_A.mp4` normal, `B1` fighting, `B2` shooting, `B4` riot, `B5` abuse, `B6` car accident, `G` explosion;
-several codes joined by `-` when more than one kind occurs). Only the smaller files (<= 8 MB) are used, to keep the
+several codes joined by `-` when more than one kind occurs). Only the smaller files (<= 6 MB) are used, to keep the
 download manageable; clips longer than 30 s are cut to their central 30 s (frames and sound come from the same window).
 `test_videos/` is the test split; the official train videos are split into train (90 %) and val (10 %) by hash of the file name.
 
@@ -24,7 +24,7 @@ from jevtrainer.data.base import DatasetSpec, choice_record, noul_record, regist
 
 _REPO = "jherng/xd-violence"
 _WORKERS = int(os.environ.get("JEVTRAINER_AV_WORKERS", "8"))
-_MAX_BYTES = int(float(os.environ.get("JEVTRAINER_XD_MAX_MB", "8")) * 1e6)
+_MAX_BYTES = int(float(os.environ.get("JEVTRAINER_XD_MAX_MB", "6")) * 1e6)
 
 CODES = {"A": "normal", "B1": "fighting", "B2": "shooting", "B4": "riot", "B5": "abuse", "B6": "car_accident", "G": "explosion"}
 TYPES = {
@@ -91,9 +91,9 @@ def _convert(rows: list[dict]) -> None:
 def _pick(split: str, cap: int, rng, single: bool) -> list[dict]:
     rows = [r for r in _split_rows(split) if len(r["codes"]) == 1 or not single]
     rng.shuffle(rows)
-    per = {"train": 260, "val": 40, "test": 60}[split]
+    per = {"train": 100, "val": 12, "test": 25}[split]
     group = lambda r: r["codes"][0] if len(r["codes"]) == 1 else "multi"
-    rows = balanced_take(rows, group, min(cap, per * 8), rng)
+    rows = balanced_take(rows, group, min(cap, per * 8), rng)  # ~100 train videos per class: the mirror is slow
     return rows
 
 
