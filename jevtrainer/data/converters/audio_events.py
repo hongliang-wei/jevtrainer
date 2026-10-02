@@ -56,7 +56,7 @@ def fsd50k(split, cap, rng):
         part = {r["fname"]: ("val" if r["split"] == "val" else "train") for r in raw}
     leaves = sorted({v[0] for v in labels.values()})
     files = avkit.parquet_files(repo, f"data/{sub}-")
-    rows = avkit.parquet_rows(repo, files, ["name"])
+    rows = avkit.parquet_rows(repo, files, ["name"], "fsd50k")
     for r in rows:
         r["fname"] = r["name"].rsplit("/", 1)[-1].rsplit(".", 1)[0].rsplit("_", 1)[0]
     rows = [r for r in rows if r["name"].endswith("_0.ogg") and part.get(r["fname"]) == split]
@@ -74,6 +74,7 @@ def fsd50k(split, cap, rng):
                               labels=r["labels"])
         if rec:
             yield rec
+    avkit.release("fsd50k")
 
 
 # ---- AudioSet: 10 s YouTube clips, 527 classes, multi-label ---------------------------------------------------
@@ -93,7 +94,7 @@ def audioset(split, cap, rng):
     repo = "agkphysics/AudioSet"
     sub = "bal_train" if split == "train" else "eval"
     files = avkit.parquet_files(repo, f"data/{sub}/")
-    rows = avkit.parquet_rows(repo, files, ["video_id", "human_labels"])
+    rows = avkit.parquet_rows(repo, files, ["video_id", "human_labels"], "audioset")
     freq = Counter(x for r in rows for x in r["human_labels"])
     pool_all = sorted(x for x, n in freq.items() if x not in _GENERIC and n >= 5)
     rows = [r for r in rows if r["human_labels"]]
@@ -110,6 +111,7 @@ def audioset(split, cap, rng):
                               labels=r["human_labels"])
         if rec:
             yield rec
+    avkit.release("audioset")
 
 
 register(DatasetSpec("esc50", esc50, ("train", "test"), "ashraq/esc50", "cc-by-nc-3.0", "audio", multimodal=True,

@@ -259,34 +259,29 @@ def parquet_files(repo: str, prefix: str = "", suffix: str = ".parquet") -> list
     return sorted(f for f in names if f.startswith(prefix) and f.endswith(suffix))
 
 
-def parquet_rows(repo: str, files: list[str], columns: list[str], workers: int = 4) -> list[dict]:
-    """Rows of the given (non-audio) columns of remote parquet files, read by range requests (no full download).
+def parquet_rows(repo: str, files: list[str], columns: list[str], name: str, workers: int = 4) -> list[dict]:
+    """Rows of the given (non-audio) columns of parquet shards. The shards are downloaded into raw/<name> (4 at a time) and
+    stay there so that `parquet_audio` can decode the picked rows without fetching them again.
 
-    Every row gets `_file` (its path in the repo), `_i` (its index in that file) and `_rg` (its row group) so that
-    `parquet_audio` can find it.
+    Every row gets `_file` (its path in the repo), `_i` (its index in that file) and `_rg` (its row group).
     """
+    import time
     from concurrent.futures import ThreadPoolExecutor
 
     import pyarrow.parquet as pq
-    from huggingface_hub import HfFileSystem
-
-    fs = HfFileSystem()
 
     def one(fn):
-        for attempt in range(3):
-            try:
-                with fs.open(f"datasets/{repo}/{fn}") as f:
-                    pf = pq.ParquetFile(f)
-                    sizes = [pf.metadata.row_group(k).num_rows for k in range(pf.num_row_groups)]
-                    rows = pf.read(columns=columns).to_pylist()
-                groups = [k for k, n in enumerate(sizes) for _ in range(n)]
+        src = None
+        for attempt in range(4):
+            src = fetch_file(repo, fn, name)
+            if src is not None:
                 break
-            except Exception:
-                if attempt == 2:
-                    return []
-                import time
-
-                time.sleep(10 * (attempt + 1))
+            time.sleep(15 * (attempt + 1))
+        if src is None:
+            return []
+        pf = pq.ParquetFile(str(src))
+        groups = [k for k in range(pf.num_row_groups) for _ in range(pf.metadata.row_group(k).num_rows)]
+        rows = pf.read(columns=columns).to_pylist() if columns else [{} for _ in groups]
         for i, r in enumerate(rows):
             r["_file"], r["_i"], r["_rg"] = fn, i, groups[i]
         return rows
@@ -421,6 +416,13 @@ def audio_mcq(id: str, media: dict, question: str, gold: str, pool: list[str], r
     return rec
 
 
+def release(name: str) -> None:
+    """Delete the downloaded shards of a dataset once its records are written (set JEVTRAINER_KEEP_RAW=1 to keep them while
+    several splits of the dataset are being prepared one after the other; delete them by hand afterwards)."""
+    if not os.environ.get("JEVTRAINER_KEEP_RAW"):
+        drop_raw(name)
+
+
 def use_remote(rows: list[dict], picked: list[dict]) -> bool:
     """True when the picked rows sit in less than half of the row groups: then range requests beat downloading shards."""
     total = {(r["_file"], r["_rg"]) for r in rows}
@@ -436,7 +438,7 @@ def clip_choice(name: str, split: str, cap: int, rng, repo: str, files: list[str
     `label_of(row)` gives the answer text (None = skip row); distractors are drawn from `pool` (default: all answers seen).
     `pool` may also be a function row -> list. Only shards that hold a picked row are downloaded (and deleted afterwards).
     """
-    rows = [r for r in parquet_rows(repo, files, columns) if (keep is None or keep(r))]
+    rows = [r for r in parquet_rows(repo, files, columns, name) if (keep is None or keep(r))]
     for r in rows:
         r["_y"] = label_of(r)
     rows = [r for r in rows if r["_y"]]
@@ -444,7 +446,7 @@ def clip_choice(name: str, split: str, cap: int, rng, repo: str, files: list[str
     rng.shuffle(rows)
     picked = balanced(rows, group_of or (lambda r: r["_y"]), cap, rng) if balance else rows[:cap]
     media = parquet_audio(repo, picked, name, lambda r: rid_(name, split, key_of(r)), audio_col, max_s,
-                          remote=use_remote(rows, picked))
+                          remote=False)
     for r, m in zip(picked, media):
         if not m:
             continue
@@ -453,6 +455,7 @@ def clip_choice(name: str, split: str, cap: int, rng, repo: str, files: list[str
                         **(meta_of(r) if meta_of else {}))
         if rec:
             yield rec
+    release(name)
 
 
 def rid_(*parts) -> str:
@@ -489,3 +492,84 @@ def tar_members(path: Path, suffixes: tuple[str, ...] = (".wav", ".flac", ".mp3"
         for m in t:
             if m.isfile() and m.name.lower().endswith(suffixes):
                 yield m.name, t.extractfile(m).read()
+
+
+def clip_label(name: str, split: str, cap: int, rng, repo: str, files: list[str], columns: list[str], label_of, question: str,
+                criteria: dict[str, str], key_of, max_s: float = 30.0, keep=None, meta_of=None, balance: bool = True,
+                audio_col: str = "audio", instructions: str = AUDIO_Q, remote: bool | None = None, rows: list[dict] | None = None):
+    """Like `clip_choice` but with a fixed label set (`criteria`: label -> meaning) or, when `criteria` has exactly the keys
+    {"true", "false"}, a yes/no question (`label_of` then returns True / False). `label_of(row)` = None skips a row."""
+    if rows is None:
+        rows = [r for r in parquet_rows(repo, files, columns, name) if (keep is None or keep(r))]
+    for r in rows:
+        r["_y"] = label_of(r)
+    rows = [r for r in rows if r["_y"] is not None]
+    rng.shuffle(rows)
+    picked = balanced(rows, lambda r: r["_y"], cap, rng) if balance else rows[:cap]
+    media = parquet_audio(repo, picked, name, lambda r: rid_(name, split, key_of(r)), audio_col, max_s,
+                          remote=bool(remote))
+    yes_no = set(criteria) == {"true", "false"}
+    for r, m in zip(picked, media):
+        if not m:
+            continue
+        meta = meta_of(r) if meta_of else {}
+        if yes_no:
+            yield audio_noul(rid_(name, split, key_of(r)), m, question, bool(r["_y"]), criteria["true"], criteria["false"], **meta)
+        else:
+            yield audio_choice(rid_(name, split, key_of(r)), m, question, criteria, r["_y"], instructions, **meta)
+    release(name)
+
+
+def parquet_head(repo: str, fn: str, name: str, n_rows: int, columns: list[str] | None = None) -> list[dict]:
+    """The first rows (whole row groups, at least `n_rows`) of a big parquet shard, fetched with ONE streaming range request.
+
+    Row groups are stored one after another, so the first k of them are a contiguous byte prefix of the file. The prefix and
+    the footer are written into a sparse file that pyarrow can open; nothing else of the shard is downloaded.
+    """
+    import urllib.request
+
+    import pyarrow.parquet as pq
+    from huggingface_hub import hf_hub_url
+
+    url = hf_hub_url(repo, fn, repo_type="dataset")
+    tail = 4 << 20
+
+    def get(a: int, b: int):
+        req = urllib.request.Request(url, headers={"Range": f"bytes={a}-{b}"})
+        return urllib.request.urlopen(req, timeout=120)
+
+    head = urllib.request.Request(url, method="HEAD")
+    size = int(urllib.request.urlopen(head, timeout=120).headers["Content-Length"])
+    path = raw_dir(name) / "_head" / (fn.replace("/", "__") + f".{os.getpid()}.{id(fn)}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(path, "wb") as f:
+            f.truncate(size)
+            a = max(0, size - tail)
+            f.seek(a)
+            f.write(get(a, size - 1).read())
+        md = pq.ParquetFile(str(path)).metadata
+        end, rows, k = 0, 0, 0
+        while k < md.num_row_groups and rows < n_rows:
+            rg = md.row_group(k)
+            for c in range(rg.num_columns):
+                col = rg.column(c)
+                start = col.dictionary_page_offset if col.has_dictionary_page and col.dictionary_page_offset else col.data_page_offset
+                end = max(end, start + col.total_compressed_size)
+            rows += rg.num_rows
+            k += 1
+        with open(path, "r+b") as f, get(0, min(end, size) - 1) as resp:
+            while True:
+                chunk = resp.read(1 << 20)
+                if not chunk:
+                    break
+                f.write(chunk)
+        pf = pq.ParquetFile(str(path))
+        out: list[dict] = []
+        for g in range(k):
+            out += pf.read_row_group(g, columns=columns).to_pylist()
+        for i, r in enumerate(out):
+            r["_file"], r["_i"] = fn, i
+        return out
+    finally:
+        path.unlink(missing_ok=True)

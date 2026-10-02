@@ -7,7 +7,7 @@ fixed hash-based 10 % test split.
 
 from __future__ import annotations
 
-from collections import defaultdict
+import random
 
 from jevtrainer.data import avkit
 from jevtrainer.data.base import DatasetSpec, register
@@ -82,40 +82,46 @@ def speech_commands(split, cap, rng):
 # ---- FLEURS: spoken language identification, 102 languages -----------------------------------------------------
 def fleurs_langid(split, cap, rng):
     """Which language is spoken. Answer = the language name of the recording, distractors = three other FLEURS languages.
-    Every language contributes the same number of clips (cap / 102); clips are cut from a few 100-row groups of one shard
-    per language (range requests), so each language costs about 100-200 MB instead of its whole split."""
+    Every language contributes the same number of clips (cap / 102). The clips are the first 100-row groups of one shard
+    per language, fetched with a single range request, so each language costs ~100-150 MB instead of its whole split."""
+    from concurrent.futures import ThreadPoolExecutor
+
     repo = "mteb/fleurs"
     part = {"train": "train", "val": "validation", "test": "test"}[split]
     names = [f for f in avkit.parquet_files(repo) if f.rsplit("/", 1)[-1].startswith(part)]
-    by_lang: dict[str, list[str]] = defaultdict(list)
-    for f in names:
-        by_lang[f.split("/")[0]].append(f)
-    per_lang = max(1, cap // len(by_lang))
-    first = {lang: sorted(files)[0] for lang, files in by_lang.items()}
-    all_rows = avkit.parquet_rows(repo, sorted(first.values()), ["id", "language"], workers=6)
-    lang_of = {fn: lang for lang, fn in first.items()}
-    groups: dict = defaultdict(lambda: defaultdict(list))  # language -> (file, row group) -> rows
-    for r in all_rows:
-        r["lang_dir"] = lang_of[r["_file"]]
-        groups[r["lang_dir"]][(r["_file"], r["_rg"])].append(r)
-    picked: list[dict] = []
-    for lang in sorted(groups):
-        keys = sorted(groups[lang])
-        rng.shuffle(keys)
-        chosen: list[dict] = []
-        for k in keys:
-            if len(chosen) >= per_lang:
+    first: dict[str, str] = {}
+    for f in sorted(names):
+        first.setdefault(f.split("/")[0], f)
+    per_lang = max(1, cap // len(first))
+
+    def one(item):
+        lang, fn = item
+        for attempt in range(3):
+            try:
+                rows = avkit.parquet_head(repo, fn, "fleurs_langid", per_lang, ["id", "language", "audio"])
                 break
-            chosen += groups[lang][k]
-        rng.shuffle(chosen)
-        picked += chosen[:per_lang]
-    pool = sorted({r["language"] for r in picked})
-    key = lambda r: f"{r['lang_dir']}:{r['id']}"  # noqa: E731
-    media = avkit.parquet_audio(repo, picked, "fleurs_langid", lambda r: avkit.rid_("fleurs_langid", split, key(r)), remote=True, shards=3)
-    for r, m in zip(picked, media):
-        if m:
-            rec = avkit.audio_mcq(avkit.rid_("fleurs_langid", split, key(r)), m, "Which language is spoken in this recording?",
-                                  r["language"], pool, rng, source_label=r["lang_dir"])
+            except Exception:
+                rows = []
+                import time
+
+                time.sleep(15 * (attempt + 1))
+        local = random.Random(f"fleurs:{split}:{lang}")
+        local.shuffle(rows)
+        out = []
+        for r in rows[:per_lang]:
+            key = f"{lang}:{r['id']}"
+            m = avkit.audio_from_bytes(r["audio"]["bytes"], "fleurs_langid", avkit.rid_("fleurs_langid", split, key))
+            if m:
+                out.append((key, r["language"], m))
+        return lang, out
+
+    with ThreadPoolExecutor(6) as ex:
+        results = list(ex.map(one, sorted(first.items())))
+    pool = sorted({lang_name for _, out in results for _, lang_name, _ in out})
+    for lang, out in results:
+        for key, lang_name, m in out:
+            rec = avkit.audio_mcq(avkit.rid_("fleurs_langid", split, key), m, "Which language is spoken in this recording?",
+                                  lang_name, pool, rng, source_label=lang)
             if rec:
                 yield rec
 
