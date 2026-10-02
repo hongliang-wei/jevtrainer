@@ -165,3 +165,47 @@ truncation to 12k characters) and QASPER (evidence paragraphs always kept).
 8,497 steps at batch 16 x 4. Long-doc is 20.6% of records; most of its states are 1-3.5k tokens.
 The trainer fits temperature only on the holdout; `longdoc-dev` (20 validation splits, <= 300 rows each)
 is evaluated per checkpoint after training for checkpoint selection and as a harder calibration check.
+
+#### longdoc-dev / gui-v1 evaluation (v4)
+
+`jt eval --set checkpoint=runs/repro/intern_0.8b_v4 --set benchmarks=longdoc-dev` (and `gui-v1`), default `max_samples`; baseline `--set model=Qwen/Qwen3.5-0.8B` (untrained, temperature 1; v4 uses its fitted temperature, so ECE is not strictly like for like). Accuracy in %, ECE with 10 bins. Means are unweighted over benchmarks (accuracy, not the soft `score` of results.md; results.md averages of `score`: longdoc-dev final 81.16 / step-8000 81.14 / zero-shot 39.99, gui-v1 final 66.71 / zero-shot 48.29).
+
+longdoc-dev (20 validation splits; step-8000 is the last intermediate checkpoint):
+
+| benchmark | n | v4 final acc | v4 final ECE | v4 step-8000 acc | v4 step-8000 ECE | zero-shot Qwen3.5-0.8B acc | zero-shot Qwen3.5-0.8B ECE |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| docnli_dev | 200 | 77.00 | 0.1356 | 76.50 | 0.1327 | 51.50 | 0.1632 |
+| ecthr_dev | 278 | 82.37 | 0.0301 | 82.37 | 0.0276 | 67.63 | 0.0980 |
+| finqa_dev | 300 | 84.67 | 0.0314 | 85.00 | 0.0387 | 30.00 | 0.1368 |
+| halueval_summ_dev | 200 | 100.00 | 0.0027 | 100.00 | 0.0024 | 42.50 | 0.1969 |
+| hotpotqa_dev | 200 | 97.50 | 0.0324 | 97.50 | 0.0273 | 18.50 | 0.4456 |
+| legalbench_consumer_contracts_dev | 48 | 87.50 | 0.0857 | 87.50 | 0.0697 | 50.00 | 0.0943 |
+| legalbench_rules_dev | 396 | 90.15 | 0.0232 | 89.90 | 0.0250 | 37.63 | 0.3597 |
+| maud_dev | 200 | 82.00 | 0.0529 | 82.00 | 0.0656 | 39.00 | 0.1978 |
+| mt_bench_human_dev | 244 | 63.52 | 0.0694 | 62.30 | 0.0698 | 34.84 | 0.4311 |
+| musique_dev | 460 | 98.91 | 0.0080 | 99.13 | 0.0066 | 26.30 | 0.3079 |
+| ppe_ifeval_dev | 542 | 64.94 | 0.0436 | 64.94 | 0.0392 | 38.19 | 0.3196 |
+| qasper_dev | 111 | 79.28 | 0.0752 | 78.38 | 0.0618 | 38.74 | 0.1977 |
+| quality_dev | 353 | 73.37 | 0.0613 | 73.37 | 0.0646 | 40.23 | 0.0895 |
+| reward_bench2_dev | 175 | 74.86 | 0.0443 | 74.86 | 0.0404 | 26.29 | 0.2117 |
+| sharc_dev | 200 | 71.00 | 0.1041 | 71.00 | 0.1029 | 35.00 | 0.1742 |
+| swe_agent_dev | 200 | 73.00 | 0.0611 | 74.50 | 0.0421 | 49.50 | 0.1595 |
+| tatqa_dev | 706 | 81.16 | 0.0279 | 81.16 | 0.0254 | 28.75 | 0.1220 |
+| timeqa_dev | 300 | 80.33 | 0.0548 | 80.67 | 0.0472 | 40.33 | 0.1947 |
+| wice_dev | 200 | 74.50 | 0.0757 | 74.00 | 0.0661 | 52.50 | 0.3114 |
+| wikihop_dev | 200 | 82.00 | 0.0497 | 82.50 | 0.0446 | 60.00 | 0.1290 |
+| **mean** | | 80.90 | 0.0535 | 80.88 | 0.0500 | 40.37 | 0.2170 |
+
+gui-v1 (held-out GUI splits; no GUI dataset is in v4's training mixture):
+
+| benchmark | n | v4 final acc | v4 final ECE | zero-shot Qwen3.5-0.8B acc | zero-shot Qwen3.5-0.8B ECE |
+|---|---:|---:|---:|---:|---:|
+| guiact_smartphone_test | 1305 | 50.27 | 0.1485 | 28.12 | 0.2433 |
+| guiact_web_multi_test | 1398 | 44.21 | 0.1312 | 39.63 | 0.1026 |
+| guiact_web_single_test | 1757 | 81.33 | 0.0360 | 70.01 | 0.0904 |
+| mm_mind2web_test_domain | 1000 | 73.20 | 0.0238 | 40.90 | 0.0744 |
+| mm_mind2web_test_task | 1000 | 76.10 | 0.0250 | 42.90 | 0.0641 |
+| mm_mind2web_test_website | 973 | 68.86 | 0.0472 | 42.55 | 0.0687 |
+| omniact_test | 1000 | 86.90 | 0.0362 | 76.30 | 0.0583 |
+| weblinx_valid | 729 | 52.81 | 0.1691 | 45.95 | 0.1411 |
+| **mean** | | 66.71 | 0.0771 | 48.29 | 0.1054 |
