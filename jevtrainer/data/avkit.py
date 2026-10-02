@@ -242,6 +242,29 @@ def audio_from_bytes(data: bytes, name: str, key: str, max_s: float = 30.0) -> d
     return {"type": "audio", "path": str(out)}
 
 
+def walk_repo_files(repo: str) -> list[str]:
+    """All file names of a hub dataset repo, listed folder by folder. The mirror rate-limits the recursive tree
+    endpoint (429 with a long Retry-After) much harder than the per-folder one, so this works when list_repo_files does not."""
+    import time
+
+    from huggingface_hub import HfApi
+
+    api, out, todo = HfApi(), [], [None]
+    while todo:
+        folder = todo.pop()
+        for attempt in range(4):
+            try:
+                entries = list(api.list_repo_tree(repo, path_in_repo=folder, repo_type="dataset", recursive=False))
+                break
+            except Exception:
+                if attempt == 3:
+                    raise
+                time.sleep(5 * (attempt + 1))
+        for e in entries:
+            (todo if type(e).__name__ == "RepoFolder" else out).append(e.path)
+    return sorted(out)
+
+
 def parquet_files(repo: str, prefix: str = "", suffix: str = ".parquet") -> list[str]:
     """Sorted parquet file names of a hub dataset repo that start with `prefix`."""
     import json
@@ -264,6 +287,11 @@ def parquet_files(repo: str, prefix: str = "", suffix: str = ".parquet") -> list
             except Exception:
                 try:  # the repo-info endpoint is not throttled like the recursive tree one
                     names = [s.rfilename for s in HfApi().dataset_info(repo).siblings]
+                    break
+                except Exception:
+                    pass
+                try:  # listing folder by folder (non-recursive tree calls are throttled far less)
+                    names = walk_repo_files(repo)
                     break
                 except Exception:
                     pass
