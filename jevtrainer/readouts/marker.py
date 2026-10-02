@@ -33,7 +33,11 @@ class MarkerReadout(Readout):
         for s in SYMBOLS:
             t = self.tok.encode(s, add_special_tokens=False)
             if len(t) != 1:
-                raise ValueError(f"symbol {s!r} is not a single token for this tokenizer")
+                # tokenizers that prepend BOS / a space inside encode() (Nandi, Lumma): use the bare vocabulary entry
+                tid = self.tok.convert_tokens_to_ids(s)
+                if not isinstance(tid, int) or tid == self.tok.unk_token_id:
+                    raise ValueError(f"symbol {s!r} is not a single token for this tokenizer")
+                t = [tid]
             ids.append(t[0])
         self.symbol_ids = ids
         if family.lm_head(model) is None:
