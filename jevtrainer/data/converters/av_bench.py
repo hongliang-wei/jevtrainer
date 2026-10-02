@@ -94,8 +94,8 @@ def daily_omni(split, cap, rng):
         opts = _options(r["Choice"])
         rec = mcq(rid("daily_omni", r["video_id"], i, r["Question"][:40]), _video_state(r["Question"]), Q_AV, opts,
                   letter_index(r["Answer"], len(opts)), [items.get(r["video_id"])], "av", category=r["Type"], task_type=r["Type"],
-                  domain=r["content_parent_category"], duration=r["video_duration"], sub_category=r["content_fine_category"],
-                  video_category=r["video_category"], source_id=youtube_source(r["video_id"]) or f"daily_omni:{r['video_id']}")
+                  domain=r.get("content_parent_category"), duration=r.get("video_duration"), sub_category=r.get("content_fine_category"),
+                  video_category=r.get("video_category"), source_id=youtube_source(r["video_id"]) or f"daily_omni:{r['video_id']}")
         if rec:
             yield rec
 
