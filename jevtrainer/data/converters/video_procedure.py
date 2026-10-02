@@ -8,6 +8,7 @@ and sound decide, not the surrounding text.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 from jevtrainer.data import avkit, vidkit
 from jevtrainer.data.base import DatasetSpec, register, rid
@@ -74,6 +75,50 @@ def epic_kitchens(split, cap, rng):
             yield rec
 
 
+# ---- COIN: instructional steps over 12 domains ------------------------------------------------------------------------
+_COIN_VID = "ttyue/COIN_Dataset"
+_COIN_ANN = "https://raw.githubusercontent.com/coin-dataset/annotations/master/COIN.json"
+
+
+def coin(split, cap, rng):
+    """COIN (180 tasks, 778 step labels, YouTube how-to videos): each annotated step segment is cut out of its video (with
+    sound); the answer is the step label ("put on the hair extensions"); distractors are step labels of other tasks.
+    Official training -> train, testing -> test. Whole videos are ~35 MB, so at most JT_COIN_VIDEOS (default 220 train /
+    60 test) videos are fetched; every step segment of a fetched video becomes one clip."""
+    import json
+    import os
+
+    db = json.loads(vidkit.http_text(_COIN_ANN, "coin", "COIN.json"))["database"]
+    want = "training" if split == "train" else "testing"
+    path = {Path(f).stem: f for f in vidkit.listing(_COIN_VID, "videos/") if f.endswith(".mp4")}
+    vids = sorted(v for v, a in db.items() if a["subset"] == want and v in path and a.get("annotation"))
+    rng.shuffle(vids)
+    vids = vids[:min(int(os.environ.get("JT_COIN_VIDEOS", 220 if split == "train" else 60)), max(1, cap // 3))]
+    raw = vidkit.fetch_many(_COIN_VID, "coin", {v: path[v] for v in vids}, workers=4)
+    jobs, segs = {}, {}
+    for v, src in raw.items():
+        for a in db[v]["annotation"]:
+            s, e = a["segment"]
+            if e - s < 1.5 or e - s > 60:
+                continue
+            key = f"{v}_{a['id']}"
+            jobs[key] = {"src": src, "start": float(s), "end": float(e)}
+            segs[key] = (v, a["label"].strip(), db[v].get("class", ""))
+    media = vidkit.convert_local("coin", jobs, frames=8, max_side=448, audio_s=30)
+    labels = sorted({s[1] for s in segs.values()})
+    keys = [k for k in media]
+    rng.shuffle(keys)
+    for k in keys[:cap]:
+        v, gold, task = segs[k]
+        others = [x for x in rng.sample(labels, min(60, len(labels))) if x != gold]
+        rec = vidkit.option_record(rid("coin", split, k), media[k], "Which step of the task is being performed in this clip?", gold, others, rng,
+                                   Q_STEP, area="video", dataset="coin", task=task)
+        if rec:
+            yield rec
+
+
+register(DatasetSpec("coin", coin, ("train", "test"), "https://coin-dataset.github.io", "cc-by-nc-sa-4.0", "video", multimodal=True,
+                     description="COIN instructional steps: pick the step label of a how-to video segment"))
 register(DatasetSpec("epic_kitchens", epic_kitchens, ("train", "val"), _EK, "cc-by-nc-4.0", "video", multimodal=True,
                      description="EPIC-KITCHENS-100 egocentric clips: pick the narrated action"))
 register(DatasetSpec("youcook2", youcook2, ("train", "test"), _YC, "other (research)", "video", multimodal=True,
