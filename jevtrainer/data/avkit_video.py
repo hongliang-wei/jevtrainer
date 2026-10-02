@@ -238,3 +238,105 @@ def convert_parquet_videos(path: Path, name: str, id_col: str, video_col: str, k
             del tbl
             n += sum(ex.map(one, zip(ids, vids)))
     return n
+
+# ---- members of a remote zip, read with range requests (no need to download the whole archive) -----------------
+class _RangeFile:
+    """Read-only seekable file over HTTP range requests (1 MB block cache); enough for `zipfile` to read the directory."""
+
+    def __init__(self, url: str, size: int, block: int = 1 << 20):
+        self.url, self.size, self.block, self.pos, self.cache = url, size, block, 0, {}
+
+    def seekable(self):
+        return True
+
+    def tell(self):
+        return self.pos
+
+    def seek(self, off, whence=0):
+        self.pos = off if whence == 0 else self.pos + off if whence == 1 else self.size + off
+        return self.pos
+
+    def _block(self, i: int) -> bytes:
+        if i not in self.cache:
+            s = i * self.block
+            self.cache[i] = http_range(self.url, s, min(self.size, s + self.block) - 1)
+        return self.cache[i]
+
+    def read(self, n: int = -1) -> bytes:
+        end = self.size if n is None or n < 0 else min(self.size, self.pos + n)
+        out = []
+        while self.pos < end:
+            i = self.pos // self.block
+            b = self._block(i)
+            lo = self.pos - i * self.block
+            take = b[lo:lo + (end - self.pos)]
+            out.append(take)
+            self.pos += len(take)
+        return b"".join(out)
+
+
+def http_range(url: str, start: int, end: int, retries: int = 8) -> bytes:
+    """Bytes [start, end] (inclusive) of a URL, retried with backoff."""
+    import time
+    import urllib.request
+
+    for attempt in range(retries):
+        try:
+            req = urllib.request.Request(url, headers={"Range": f"bytes={start}-{end}", "User-Agent": "jevtrainer"})
+            with urllib.request.urlopen(req, timeout=90) as r:
+                buf = r.read()
+            if len(buf) == end - start + 1:
+                return buf
+        except Exception:
+            pass
+        time.sleep(min(30, 2 ** attempt))
+    raise IOError(f"range request failed: {url} {start}-{end}")
+
+
+def remote_zip_index(repo: str, filename: str, repo_type: str = "dataset"):
+    """(url, {member name: ZipInfo}) of a zip file on the hub, reading only its directory."""
+    import zipfile
+
+    from huggingface_hub import get_hf_file_metadata, hf_hub_url
+
+    url = hf_hub_url(repo, filename, repo_type=repo_type)
+    size = int(get_hf_file_metadata(url).size)
+    with zipfile.ZipFile(_RangeFile(url, size)) as z:
+        return url, {i.filename: i for i in z.infolist() if not i.is_dir()}
+
+
+def remote_zip_member(url: str, info) -> bytes:
+    """Bytes of one member (stored or deflated) fetched with a single range request."""
+    import struct
+    import zlib
+
+    head = http_range(url, info.header_offset, info.header_offset + 30 + 1024 + info.compress_size - 1)
+    fn_len, extra_len = struct.unpack("<HH", head[26:30])
+    data = head[30 + fn_len + extra_len:30 + fn_len + extra_len + info.compress_size]
+    return data if info.compress_type == 0 else zlib.decompress(data, -15)
+
+
+def convert_remote_zip_videos(repo: str, filename: str, name: str, wanted: dict, workers: int = 8, delete_raw: bool = True,
+                              **kw) -> dict[str, dict]:
+    """Like `convert_zip_videos` but each member is fetched on its own: `wanted` {member: key | (key, kwargs)}."""
+    url, index = remote_zip_index(repo, filename)
+    tmp = avkit.raw_dir(name) / "_x"
+    tmp.mkdir(parents=True, exist_ok=True)
+
+    def one(kv):
+        member, (key, okw) = kv
+        c = cached_item(name, key)
+        if c:
+            return key, c
+        info = index.get(member)
+        if info is None:
+            return key, None
+        try:
+            dst = tmp / f"{key}{Path(member).suffix}"
+            dst.write_bytes(remote_zip_member(url, info))
+        except Exception:
+            return key, None
+        return key, _convert_file(dst, name, key, delete_raw, {**kw, **okw})
+
+    with ThreadPoolExecutor(workers) as ex:
+        return {k: v for k, v in ex.map(one, _norm(wanted).items()) if v}
