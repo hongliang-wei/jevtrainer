@@ -103,11 +103,11 @@ GENDER = {"male": "male: a man's voice", "female": "female: a woman's voice"}
 
 def ami_gender(split, cap, rng):
     pool = _ami_pool(split, min(cap, {"train": 3000, "val": 300, "test": 600}[split]), rng)
-    rng.shuffle(pool)
+    pool = [dict(a, g=g) for a in pool if (g := {"M": "male", "F": "female"}.get(a["spk"][:1]))]
+    minority = min(sum(a["g"] == "male" for a in pool), sum(a["g"] == "female" for a in pool))
+    pool = avkit.balanced(pool, lambda a: a["g"], min(cap, 2 * minority), rng)  # exactly even male / female
     for a in pool:
-        g = {"M": "male", "F": "female"}.get(a["spk"][:1])
-        if g is None:
-            continue
+        g = a["g"]
         rec = choice_record(rid("ami_gender", split, a["id"]), {"clip": "<audio:1>", "question": "Is the speaker male or female?"},
                             "Listen to the utterance. Is the speaker male or female?", dict(GENDER), g, area="audio")
         rec.media = [{"type": "audio", "path": a["path"]}]
