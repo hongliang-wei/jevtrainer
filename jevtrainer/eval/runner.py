@@ -32,8 +32,12 @@ def breakdown(outs: list[dict]) -> dict:
                 c = table.setdefault(k, {}).setdefault(str(val), [0, 0])
                 c[0] += 1
                 c[1] += hit
-    return {k: {v: {"n": n, "accuracy": h / n} for v, (n, h) in sorted(vals.items())}
-            for k, vals in table.items() if len(vals) >= 2}
+    out, seen = {}, []
+    for k, vals in table.items():
+        if len(vals) >= 2 and vals not in seen:  # a key that repeats another one (category == task_type) is dropped
+            seen.append(vals)
+            out[k] = {v: {"n": n, "accuracy": h / n} for v, (n, h) in sorted(vals.items())}
+    return out
 
 
 @torch.no_grad()

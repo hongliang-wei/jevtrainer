@@ -130,6 +130,8 @@ def test_breakdown():
     b = breakdown(outs)
     assert b["task_type"]["a"] == {"n": 2, "accuracy": 0.5} and b["task_type"]["b"] == {"n": 1, "accuracy": 1.0}
     assert "duration" not in b  # one value only: not a breakdown
+    twice = breakdown([o([1.0, 0.0], 0, category="a", task_type="a"), o([0.0, 1.0], 0, category="b", task_type="b")])
+    assert list(twice) == ["category"]  # task_type repeats category
 
 
 # ---- overlap by source id -------------------------------------------------------------------------------------
