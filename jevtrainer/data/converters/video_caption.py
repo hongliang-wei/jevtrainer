@@ -77,13 +77,13 @@ def vatex_zh(split, cap, rng):
     the hub mirrors); options are Chinese sentences. 10% of the videos (hash of the YouTube id) form the test split."""
     df = vidkit.read_parquet("lmms-eval/VATEX_ZH", "vatex_val_zh/validation-00000-of-00001.parquet")
     files = _vatex_files()
-    rows = [r for r in df.to_dict("records") if r["videoID"] in files and len(r["chCap"]) > 0
-            and avkit.hash_pct(r["videoID"], 10) == (split == "test")]
+    rows = [r for r in df.to_dict("records") if r["videoID"][:11] in files and len(r["chCap"]) > 0
+            and avkit.hash_pct(r["videoID"][:11], 10) == (split == "test")]
     rng.shuffle(rows)
     rows = rows[:cap]
-    media = vidkit.convert_hub(_VX, "vatex", {r["videoID"]: files[r["videoID"]] for r in rows}, frames=8, max_side=448, audio_s=12)
-    caps = {r["videoID"]: [str(c) for c in r["chCap"]] for r in rows}
-    yield from _emit("vatex_zh", split, rng, [r["videoID"] for r in rows], caps, media, lang_q="哪一句话最准确地描述了这段视频？")
+    media = vidkit.convert_hub(_VX, "vatex", {r["videoID"][:11]: files[r["videoID"][:11]] for r in rows}, frames=8, max_side=448, audio_s=12)
+    caps = {r["videoID"][:11]: [str(c) for c in r["chCap"]] for r in rows}
+    yield from _emit("vatex_zh", split, rng, [r["videoID"][:11] for r in rows], caps, media, lang_q="哪一句话最准确地描述了这段视频？")
 
 
 register(DatasetSpec("msrvtt", msrvtt, ("train", "test"), _MSR, "other (research)", "video", multimodal=True,
