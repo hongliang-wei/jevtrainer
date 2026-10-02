@@ -232,6 +232,7 @@ def ave_match(split, cap, rng):
 
 
 register(DatasetSpec("vggsound", vggsound, ("train", "test"), "11hu83/vggsound", "cc-by-4.0", "av", multimodal=True,
+                     version="2",  # v1 was built from only 2 of the 31 media shards
                      description="VGGSound: what makes the sound in a 10 s clip (309 classes, 4-way, similar-class distractors)"))
 register(DatasetSpec("ave", ave, ("train", "val", "test"), "UnFaZeD07/AVE-Dataset", "mit", "av", multimodal=True,
                      description="AVE: 28-way audio-visual event classification"))
