@@ -80,6 +80,21 @@ _COIN_VID = "ttyue/COIN_Dataset"
 _COIN_ANN = "https://raw.githubusercontent.com/coin-dataset/annotations/master/COIN.json"
 
 
+def _coin_sizes() -> dict[str, int]:
+    """{video id: bytes} of the COIN mp4 files of the hub repo (cached)."""
+    import json
+
+    p = avkit.raw_dir("coin") / "sizes.json"
+    if p.exists():
+        return json.loads(p.read_text())
+    from huggingface_hub import HfApi
+
+    info = vidkit.retry(lambda: HfApi().dataset_info(_COIN_VID, files_metadata=True), tries=8, wait=15)
+    out = {Path(s.rfilename).stem: s.size for s in info.siblings if s.rfilename.endswith(".mp4") and s.size}
+    p.write_text(json.dumps(out))
+    return out
+
+
 def coin(split, cap, rng):
     """COIN (180 tasks, 778 step labels, YouTube how-to videos): each annotated step segment is cut out of its video (with
     sound); the answer is the step label ("put on the hair extensions"); distractors are step labels of other tasks.
@@ -91,20 +106,31 @@ def coin(split, cap, rng):
     db = json.loads(vidkit.http_text(_COIN_ANN, "coin", "COIN.json"))["database"]
     want = "training" if split == "train" else "testing"
     path = {Path(f).stem: f for f in vidkit.listing(_COIN_VID, "videos/") if f.endswith(".mp4")}
-    vids = sorted(v for v, a in db.items() if a["subset"] == want and v in path and a.get("annotation"))
+    sizes = _coin_sizes()
+    # videos <= JT_COIN_MAX_MB (default 30) only: the mirror is slow and shorter videos give more segments per GB
+    max_b = float(os.environ.get("JT_COIN_MAX_MB", "30")) * 1e6
+    vids = sorted(v for v, a in db.items() if a["subset"] == want and v in path and a.get("annotation") and sizes.get(v, 1e18) <= max_b)
     rng.shuffle(vids)
-    vids = vids[:min(int(os.environ.get("JT_COIN_VIDEOS", 220 if split == "train" else 60)), max(1, cap // 3))]
-    raw = vidkit.fetch_many(_COIN_VID, "coin", {v: path[v] for v in vids}, workers=4)
-    jobs, segs = {}, {}
-    for v, src in raw.items():
-        for a in db[v]["annotation"]:
-            s, e = a["segment"]
-            if e - s < 1.5 or e - s > 60:
-                continue
-            key = f"{v}_{a['id']}"
-            jobs[key] = {"src": src, "start": float(s), "end": float(e)}
-            segs[key] = (v, a["label"].strip(), db[v].get("class", ""))
-    media = vidkit.convert_local("coin", jobs, frames=8, max_side=448, audio_s=30)
+    vids = vids[:int(os.environ.get("JT_COIN_VIDEOS", 1200 if split == "train" else 300))]
+    per_video = int(os.environ.get("JT_COIN_SEG_PER_VIDEO", "8"))
+    segs: dict[str, tuple] = {}
+    media: dict[str, dict] = {}
+    for i in range(0, len(vids), 40):  # batches: raw videos are deleted as soon as their segments are cut
+        batch = vids[i:i + 40]
+        raw = vidkit.fetch_many(_COIN_VID, "coin", {v: path[v] for v in batch}, workers=6)
+        jobs = {}
+        for v, src in raw.items():
+            ann = [a for a in db[v]["annotation"] if 1.5 <= a["segment"][1] - a["segment"][0] <= 60]
+            rng.shuffle(ann)
+            for a in ann[:per_video]:
+                key = f"{v}_{a['id']}"
+                jobs[key] = {"src": src, "start": float(a["segment"][0]), "end": float(a["segment"][1])}
+                segs[key] = (v, a["label"].strip(), db[v].get("class", ""))
+            if not ann:
+                Path(src).unlink(missing_ok=True)
+        media.update(vidkit.convert_local("coin", jobs, frames=8, max_side=448, audio_s=30))
+        if len(media) >= cap:
+            break
     labels = sorted({s[1] for s in segs.values()})
     keys = [k for k in media]
     rng.shuffle(keys)
@@ -117,7 +143,7 @@ def coin(split, cap, rng):
             yield rec
 
 
-register(DatasetSpec("coin", coin, ("train", "test"), "https://coin-dataset.github.io", "cc-by-nc-sa-4.0", "video", multimodal=True,
+register(DatasetSpec("coin", coin, ("train", "test"), "https://coin-dataset.github.io", "cc-by-nc-sa-4.0", "video", multimodal=True, version="2",
                      description="COIN instructional steps: pick the step label of a how-to video segment"))
 register(DatasetSpec("epic_kitchens", epic_kitchens, ("train", "val"), _EK, "cc-by-nc-4.0", "video", multimodal=True,
                      description="EPIC-KITCHENS-100 egocentric clips: pick the narrated action"))
