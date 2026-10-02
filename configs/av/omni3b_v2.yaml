@@ -6,6 +6,7 @@ readout_options:
   frame_max_side: 448
   audio_max_s: 30
   use_audio_in_video: true
+  image_pixel_budget: 1000000
 finetune: lora
 lora:
   r: 32
@@ -17,12 +18,15 @@ dataset:
   per_group: 1000
   repeat_to: 1000
 - name: agnews
-  max_samples: 1000
-  repeat_to: 1000
+  max_samples: 352
+  repeat_to: 352
 - name: ami_gender
   max_samples: 1000
   repeat_to: 1000
 - name: ami_same_speaker
+  max_samples: 1000
+  repeat_to: 1000
+- name: audioset
   max_samples: 1000
   repeat_to: 1000
 - name: ave
@@ -38,9 +42,12 @@ dataset:
 - name: avsbench
   max_samples: 1000
   repeat_to: 1000
+- name: banking77
+  max_samples: 352
+  repeat_to: 352
 - name: boolq
-  max_samples: 1000
-  repeat_to: 1000
+  max_samples: 352
+  repeat_to: 352
 - name: charades_sta
   max_samples: 1000
   repeat_to: 1000
@@ -61,8 +68,8 @@ dataset:
   max_samples: 1000
   repeat_to: 1000
 - name: csqa
-  max_samples: 1000
-  repeat_to: 1000
+  max_samples: 352
+  repeat_to: 352
 - name: emodb
   max_samples: 1000
   repeat_to: 1000
@@ -93,6 +100,15 @@ dataset:
 - name: hmdb51
   max_samples: 1000
   repeat_to: 1000
+- name: jailbreak_classification
+  max_samples: 352
+  repeat_to: 352
+- name: jebadiah_synth
+  max_samples: 352
+  repeat_to: 352
+- name: kev_suites
+  max_samples: 352
+  repeat_to: 352
 - name: kinetics400
   max_samples: 1000
   repeat_to: 1000
@@ -106,8 +122,11 @@ dataset:
   max_samples: 1000
   repeat_to: 1000
 - name: mnli
-  max_samples: 1000
-  repeat_to: 1000
+  max_samples: 352
+  repeat_to: 352
+- name: mojev_mix
+  max_samples: 352
+  repeat_to: 352
 - name: msrvtt
   max_samples: 1000
   repeat_to: 1000
@@ -126,6 +145,12 @@ dataset:
 - name: mustard
   max_samples: 1000
   repeat_to: 1000
+- name: nanojev
+  max_samples: 352
+  repeat_to: 352
+- name: onejev
+  max_samples: 1057
+  repeat_to: 1057
 - name: slurp
   max_samples: 1000
   repeat_to: 1000
@@ -142,6 +167,15 @@ dataset:
 - name: tess
   max_samples: 1000
   repeat_to: 1000
+- name: toolace
+  max_samples: 352
+  repeat_to: 352
+- name: toxic_chat
+  max_samples: 352
+  repeat_to: 352
+- name: typed_decisions
+  max_samples: 352
+  repeat_to: 352
 - name: urfunny
   max_samples: 1000
   repeat_to: 1000
@@ -160,6 +194,9 @@ dataset:
 - name: voxconverse_speakers
   max_samples: 1000
   repeat_to: 1000
+- name: wildjailbreak
+  max_samples: 352
+  repeat_to: 352
 - name: youcook2
   max_samples: 1000
   repeat_to: 1000
@@ -170,8 +207,8 @@ epochs: 1
 lr: 0.0001
 weight_decay: 0.01
 warmup_ratio: 0.03
-batch_size: 2
-grad_accum: 16
+batch_size: 1
+grad_accum: 32
 max_state_tokens: 4096
 max_length: 6144
 num_workers: 6
