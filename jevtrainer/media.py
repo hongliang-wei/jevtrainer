@@ -40,6 +40,8 @@ class VideoClip:
 @dataclass
 class MediaOptions:
     video_frames: int = 8  # frames kept per video (uniform subsample)
+    video_fps: float | None = None  # if set: keep ~this many frames per second of the clip instead (needs densely extracted frames)
+    video_max_frames: int = 32  # cap with video_fps
     frame_max_side: int = 448
     frame_tokens: int = 70  # soft tokens per video frame, for models with a configurable budget (Gemma 4: 70..1120)
     audio_max_s: float = 30.0
@@ -168,9 +170,12 @@ def load_media(record: Record, opts: MediaOptions) -> Media:
             va_max = opts.video_audio_max_s or opts.audio_max_s
             if "frames" in it:
                 refs = it["frames"]
-                keep = _pick(len(refs), opts.video_frames)
-                frames = [_resize(Image.open(_resolve(refs[i], root)).convert("RGB"), opts.frame_max_side) for i in keep]
                 dur = float(it.get("duration") or (len(refs) / float(it.get("fps") or 1.0)))
+                want = opts.video_frames
+                if opts.video_fps:  # ~video_fps frames per second; clips cached with fewer frames just keep what they have
+                    want = max(2, min(opts.video_max_frames, round(dur * opts.video_fps)))
+                keep = _pick(len(refs), want)
+                frames = [_resize(Image.open(_resolve(refs[i], root)).convert("RGB"), opts.frame_max_side) for i in keep]
                 audio = None
                 if opts.use_audio_in_video and it.get("audio"):
                     audio = load_audio(_resolve(it["audio"], root), va_max)

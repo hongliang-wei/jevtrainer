@@ -50,9 +50,19 @@ def load(name: str, split: str = "train", max_samples: int | None = None, seed: 
         spec: DatasetSpec = DATASETS.get(name)
         if split not in spec.splits:
             raise ValueError(f"dataset '{name}' has no split '{split}' (has {spec.splits})")
-        path = cache_dir() / "records" / name / f"{split}-cap{cap}-v{spec.version}.jsonl"
+        # JT_VIDEO_FPS=1: video / audio-video sets are converted at that frame rate into their own cache files
+        # (`...-fps1.jsonl`, frames under media_fps1/); JT_VIDEO_FPS_STRICT=1 never falls back to the old 8-frame files.
+        fps = os.environ.get("JT_VIDEO_FPS") if spec.area in ("video", "av") else None
+        tag = f"-fps{fps}" if fps else ""
+        path = cache_dir() / "records" / name / f"{split}-cap{cap}-v{spec.version}{tag}.jsonl"
         if not path.exists():  # converted earlier with another cap: reuse it instead of downloading everything again
-            older = sorted(path.parent.glob(f"{split}-cap*-v*.jsonl"), key=lambda p: p.stat().st_mtime)
+            allf = sorted(path.parent.glob(f"{split}-cap*-v*.jsonl"), key=lambda p: p.stat().st_mtime)
+            dense = [p for p in allf if "-fps" in p.stem]
+            plain = [p for p in allf if "-fps" not in p.stem]
+            strict = os.environ.get("JT_VIDEO_FPS_STRICT") and fps
+            older = [p for p in dense if tag and p.stem.endswith(tag)] if fps else plain
+            if fps and not strict and not older:
+                older = plain
             if older:
                 path = older[-1]
         if not path.exists():

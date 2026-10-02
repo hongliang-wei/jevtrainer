@@ -54,6 +54,9 @@ def main():
     ap.add_argument("--min-task", type=int, default=30, help="drop tasks (values of a group key) with fewer records")
     ap.add_argument("--exclude", default="", help="comma list of dataset names to leave out")
     ap.add_argument("--output-dir", default="runs/av/omni3b_v2")
+    ap.add_argument("--video-fps", type=float, default=None, help="keep ~this many frames per second of video (e.g. 1.0); needs JT_VIDEO_FPS data")
+    ap.add_argument("--text-share", type=float, default=0.10,
+                    help="fraction of the mixture kept for text / Jev-format datasets (plan: 10%%), split evenly over them")
     a = ap.parse_args()
 
     skip = {s for s in a.exclude.split(",") if s}
@@ -76,10 +79,23 @@ def main():
             sources.append({"name": name, "max_samples": a.per_task, "repeat_to": a.per_task})
             rows.append((name, spec.area, n, 1, min(n, a.per_task), ""))
 
+    # text / Jev-format datasets (anything that is not audio/video): fixed share of the whole mixture
+    media = ("av", "audio", "video")
+    txt = [r for r in rows if r[1] not in media]
+    av_total = sum(r[4] for r in rows if r[1] in media)
+    if txt and a.text_share > 0:
+        W = {"onejev": 3}  # OneJev bundles many task types (GUI, agents, video), so it gets a bigger slice
+        unit = av_total * a.text_share / (1 - a.text_share) / sum(W.get(r[0], 1) for r in txt)
+        cap = {r[0]: max(100, round(unit * W.get(r[0], 1))) for r in txt}
+        sources = [{"name": s["name"], "max_samples": cap[s["name"]], "repeat_to": cap[s["name"]]} if s["name"] in cap else s
+                   for s in sources]
+        rows = [(r[0], r[1], r[2], 1, min(r[2], cap[r[0]]), "text share") if r[0] in cap else r for r in rows]
+
     cfg = {
         "model": "Qwen/Qwen2.5-Omni-3B",
         "readout": "marker",
-        "readout_options": {"video_frames": 8, "frame_max_side": 448, "audio_max_s": 30, "use_audio_in_video": True},
+        "readout_options": {"video_frames": 8, "frame_max_side": 448, "audio_max_s": 30, "use_audio_in_video": True,
+                            **({"video_fps": a.video_fps, "video_max_frames": 32} if a.video_fps else {})},
         "finetune": "lora",
         "lora": {"r": 32, "alpha": 64},
         "output_dir": a.output_dir,

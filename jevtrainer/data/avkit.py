@@ -38,9 +38,18 @@ def raw_dir(name: str) -> Path:
 
 
 def media_dir(name: str, key: str) -> Path:
-    p = cache_dir() / "media" / name / key
+    fps = os.environ.get("JT_VIDEO_FPS")  # dense extraction: its own tree, the 8-frame cache stays valid
+    p = cache_dir() / (f"media_fps{fps}" if fps else "media") / name / key
     p.mkdir(parents=True, exist_ok=True)
     return p
+
+
+def plan_frames(frames: int, dur: float) -> int:
+    """Frames to cut from a `dur`-second clip: `frames` normally, ~JT_VIDEO_FPS per second (2..JT_VIDEO_MAX_FRAMES) when set."""
+    fps = os.environ.get("JT_VIDEO_FPS")
+    if not fps:
+        return frames
+    return max(2, min(int(os.environ.get("JT_VIDEO_MAX_FRAMES", "32")), round(dur * float(fps))))
 
 
 def drop_raw(name: str) -> None:
@@ -157,6 +166,7 @@ def video_item(src: Path, name: str, key: str, frames: int = 8, max_side: int = 
     dur = (t1 - t0) if t1 else info["duration"]
     if dur <= 0.2:
         return None
+    frames = plan_frames(frames, dur)
     out = media_dir(name, key)
     pat = out / "f%02d.jpg"
     seek = ["-ss", f"{t0:.3f}"] if start else []
