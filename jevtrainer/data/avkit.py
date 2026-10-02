@@ -95,6 +95,8 @@ def convert_videos(repo: str, name: str, items: dict[str, str], workers: int = 8
             if (out / "a.flac").exists():
                 item["audio"] = str(out / "a.flac")
             return key, item
+        if os.environ.get("JT_CACHED_ONLY"):  # build records from the clips already converted; skip the rest
+            return key, None
         src = fetch_file(repo, fn, name)
         if src is None:
             return key, None
