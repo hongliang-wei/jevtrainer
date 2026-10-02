@@ -327,7 +327,33 @@ def remote_zip_member(url: str, info) -> bytes:
     head = http_range(url, info.header_offset, info.header_offset + 30 + 1024 + info.compress_size - 1)
     fn_len, extra_len = struct.unpack("<HH", head[26:30])
     data = head[30 + fn_len + extra_len:30 + fn_len + extra_len + info.compress_size]
+    if info.compress_type == 9:  # Deflate64 (CMU-MOSEI's Raw.zip): zlib cannot read it, Info-ZIP's unzip can
+        return _unzip_single(head[:30 + fn_len + extra_len + info.compress_size], info)
     return data if info.compress_type == 0 else zlib.decompress(data, -15)
+
+
+def _unzip_single(entry: bytes, info) -> bytes:
+    """Decompress one zip entry (local header + data, as cut out of a big archive) with `unzip -p` by wrapping it in a
+    one-member zip file (central directory + end record are built here)."""
+    import struct
+    import subprocess
+    import tempfile
+
+    fn_len = struct.unpack("<H", entry[26:28])[0]
+    # central directory header: signature, made by, needed (local header), flag..usize (local header bytes 6-25), name length,
+    # extra / comment length 0, disk 0, internal / external attributes 0, local header offset 0, then the name
+    central = (struct.pack("<IHH", 0x02014B50, 20, struct.unpack("<H", entry[4:6])[0]) + entry[6:26]
+               + struct.pack("<HHHHHII", fn_len, 0, 0, 0, 0, 0, 0) + entry[30:30 + fn_len])
+    end = struct.pack("<IHHHHIIH", 0x06054B50, 0, 0, 1, 1, len(central), len(entry), 0)
+    with tempfile.NamedTemporaryFile(dir=avkit.raw_dir("_tmp"), suffix=".zip", delete=False) as f:
+        f.write(entry + central + end)
+    try:
+        out = subprocess.run(["unzip", "-p", f.name], capture_output=True)
+        if not out.stdout:
+            raise RuntimeError(f"unzip failed: {out.stderr[:200]!r}")
+        return out.stdout
+    finally:
+        Path(f.name).unlink(missing_ok=True)
 
 
 def convert_remote_zip_videos(repo: str, filename: str, name: str, wanted: dict, workers: int = 8, delete_raw: bool = True,
