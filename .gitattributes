@@ -1,0 +1,8 @@
+# One line ending in the repo whatever the machine: files copied between Windows and the servers
+# otherwise show up as fully modified.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.flac binary
+*.safetensors binary
