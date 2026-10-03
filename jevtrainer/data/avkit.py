@@ -139,16 +139,19 @@ def untar(archive: Path, dest: Path) -> Path:
 
 
 # ---- ffmpeg ---------------------------------------------------------------------------------
+def _ffmpeg_stderr(args: list[str]) -> str:
+    """ffmpeg banners are not always UTF-8; TGIF member metadata includes byte 0xdc."""
+    p = subprocess.run([ffmpeg_exe(), *args], capture_output=True)
+    return p.stderr.decode("utf-8", errors="replace")
+
+
 def _run(args: list[str]) -> str:
-    p = subprocess.run([ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-nostdin", *args],
-                       capture_output=True, text=True)
-    return p.stderr
+    return _ffmpeg_stderr(["-hide_banner", "-loglevel", "error", "-nostdin", *args])
 
 
 def probe(path: Path) -> dict:
     """duration (s), has_audio, has_video from `ffmpeg -i`."""
-    p = subprocess.run([ffmpeg_exe(), "-hide_banner", "-nostdin", "-i", str(path)], capture_output=True, text=True)
-    err = p.stderr
+    err = _ffmpeg_stderr(["-hide_banner", "-nostdin", "-i", str(path)])
     m = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", err)
     dur = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3)) if m else 0.0
     return {"duration": dur, "has_audio": " Audio:" in err, "has_video": " Video:" in err}
