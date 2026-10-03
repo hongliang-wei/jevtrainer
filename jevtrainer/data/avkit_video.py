@@ -315,7 +315,13 @@ def remote_zip_index(repo: str, filename: str, repo_type: str = "dataset"):
 
     url = hf_hub_url(repo, filename, repo_type=repo_type)
     size = int(get_hf_file_metadata(url).size)
-    with zipfile.ZipFile(_RangeFile(url, size)) as z:
+    # Some hub zips (TGIF) set the UTF-8 name flag but the names are cp437; force the zip default.
+    rf = _RangeFile(url, size)
+    try:
+        zf = zipfile.ZipFile(rf, metadata_encoding="cp437")
+    except TypeError:  # Python < 3.11
+        zf = zipfile.ZipFile(rf)
+    with zf as z:
         return url, {i.filename: i for i in z.infolist() if not i.is_dir()}
 
 
