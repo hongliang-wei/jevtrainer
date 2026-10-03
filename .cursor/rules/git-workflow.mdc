@@ -1,0 +1,23 @@
+---
+description: Multi-machine git workflow (laptop + GPU servers) for agents and subagents
+alwaysApply: true
+---
+
+# Git workflow across machines
+
+Full text: `docs/workflow.md`. The rules an agent must follow:
+
+- **Write code only in the local checkout.** Never edit repo files on a server. Servers run `git pull --ff-only`.
+  If a server has uncommitted code files, bring them back, commit and push, then clean the server.
+- **Subagents** work in the local repo, one agent per file / dataset. Tell each one which files it owns.
+- **Before adding a dataset converter**, check the name is free:
+  `rg 'DatasetSpec\("<name>"' jevtrainer`. If it exists, extend that file instead of writing a second one.
+- **Commit small and push immediately** (`git add <files>`, never `git add -A`; never add logs, `runs/`, caches,
+  secrets). Branches: `main` stable text/Jev, `av-jev` audio-video; merge `main` into `av-jev` regularly.
+- **Run `python scripts/sync_status.py`** (needs `JT_SERVERS="s1=<port>,s2=<port>"`) at the end of a work session and
+  after anything was done on a server. Fix every `FIX` line before reporting done.
+- **Run `python -m pytest -q tests/test_registry_unique.py`** before pushing converter changes.
+- Servers have a read-only deploy key: bring server-side results back with `scp` or
+  `git fetch ssh://root@<host>:<port>/root/jevtrainer <branch>:<local-branch>`, merge locally, then push.
+- Never put the SSH password or any token in the repo, in a file or in a command line that gets logged.
+- Keep `runs/` on the data disk (symlink); never write checkpoints to a server's system disk.
