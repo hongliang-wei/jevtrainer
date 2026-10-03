@@ -17,7 +17,6 @@ read out through a readout). Repo `C:\Users\20b90\Documents\jev\jevtrainer` (Git
 - Reproduce Intern-Decision-0.8B from open data on Qwen3.5-0.8B (done, v4); then larger models and audio-video Jev.
 
 ## Standing constraints
-- Open-source data only, no synthesis. No dedup for GUI data. v4 uses no GUI data beyond OneJev.
 - Never write the SSH password, HF token or W&B key into a file, the repo or a logged command. They live only in
   `/root/autodl-tmp/env.sh` on the servers.
 - Keep data processing going without disturbing a running training (server 2 has a 12-CPU cgroup limit:
