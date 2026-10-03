@@ -1,0 +1,32 @@
+---
+description: Project goal, standing constraints and where things live (jevtrainer)
+alwaysApply: true
+---
+
+# jevtrainer: goal and standing constraints
+
+Reply to the user in Chinese. Take over and keep going; do not wait for confirmation on routine steps.
+
+## Goal
+A LLaMA-Factory-like library for Jev-style decision models (state + typed questions: choice / score / noul,
+read out through a readout). Repo `C:\Users\20b90\Documents\jev\jevtrainer` (GitHub `hongliang-wei/jevtrainer`).
+- Very simple, readable, modular code; easy to add datasets, benchmarks, readouts and training methods.
+- LoRA and full fine-tuning now, RL later. One yaml file starts a training run (zero barrier).
+- Readouts: `marker` (Intern-Decision), `slot` (BosunV3.1), `pointer` (Kev).
+- Multimodal (images, now audio-video); popular and future open models must be easy to add.
+- Reproduce Intern-Decision-0.8B from open data on Qwen3.5-0.8B (done, v4); then larger models and audio-video Jev.
+
+## Standing constraints
+- Open-source data only, no synthesis. No dedup for GUI data. v4 uses no GUI data beyond OneJev.
+- Never write the SSH password, HF token or W&B key into a file, the repo or a logged command. They live only in
+  `/root/autodl-tmp/env.sh` on the servers.
+- Keep data processing going without disturbing a running training (server 2 has a 12-CPU cgroup limit:
+  pin conversion jobs with `taskset -c 88-91 nice -n 19`).
+- Check running trainings about every 30 minutes; on a crash restart with `resume: true`.
+
+## Where things are
+- Servers: s1 `ssh -p 41848 root@connect.westd.seetacloud.com` (branch `main`, text/GUI, 850 GB data disk);
+  s2 `ssh -p 43683 root@connect.westd.seetacloud.com` (branch `av-jev`, audio-video, 3090 48 GB, 30 GB system disk).
+  Run `source /root/autodl-tmp/env.sh` first. Git rules: `git-workflow.mdc`, `docs/workflow.md`.
+- Results and plans: `docs/` (e.g. `docs/repro_intern_0.8b.md`, `docs/workflow.md`). Put progress and numbers there,
+  not in this rule.
