@@ -195,11 +195,19 @@ def activitynet_captions(split, cap, rng):
         idx = [i for i, (s, e) in enumerate(a["timestamps"]) if e - s >= 3 and (e - s) <= 0.6 * a["duration"]]
         if not idx:
             continue
-        i = rng.choice(idx)
-        s, e = a["timestamps"][i]
+        rng.shuffle(idx)
         dur = min(a["duration"], m["duration"])
-        rec = window_record(rid("activitynet_captions", split, v), m, a["sentences"][i].strip(), dur, (s, min(e, dur)),
-                            [tuple(t) for t in a["timestamps"]], rng, dataset="activitynet_captions")
+        # Captions tile the clip, so forbidding every annotated span leaves no room for
+        # distractors (about 30 questions from 1200 videos). A distractor only has to miss
+        # the span being asked about.
+        rec = None
+        for i in idx:
+            s, e = a["timestamps"][i]
+            gold = (s, min(e, dur))
+            rec = window_record(rid("activitynet_captions", split, v), m, a["sentences"][i].strip(), dur, gold,
+                                [gold], rng, dataset="activitynet_captions")
+            if rec:
+                break
         if rec:
             yield rec
 
