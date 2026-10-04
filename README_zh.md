@@ -50,7 +50,7 @@ Jev 模型读入一段状态（文本、JSON，以及可选的图像、视频或
 - **三种题型**：`choice`、`score`、`noul`，一次前向同时打分。
 - **三种读出**：`marker`（Intern-Decision）、`slot`（Bosun v3.1）、`pointer`（Kev）。每种都能做 LoRA 或全参数微调。
 - **模态**：文本、图像、GUI 截图、音频、视频、音视频，用能编码这些模态的底座。
-- **开放底座**：[支持的模型](#支持的模型)里的每一系。其他因果语言模型不用写新代码，会自动推断。
+- **测过的检查点**：[支持的模型](#支持的模型)里的每一个都在真实 GPU 上完成过一次前向加反向，或一次训练。
 - **333 个数据集**已经注册。`jt data list` 和 `jt bench list` 可以查看。
 - **服务**：`jt serve` 提供 `POST /v1/systemone`。
 
@@ -73,44 +73,27 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 
 ## 支持的模型
 
-`family: auto` 按 `config.model_type` 选下面的一行。`jt model list` 打出同一份清单。表里没有的类型仍走 `GenericFamily`。
+下面这些检查点在真实 GPU 上跑过。冒烟测试是 `scripts/smoke_models.py`：bf16、LoRA r=8、`marker`、三条文本，注明的再加一条带图记录。有训练记录的，是已经真正开跑过的。
 
-| 模型 | `model_type` | 输入 | 说明 |
-| --- | --- | --- | --- |
-| Qwen2、Qwen2.5 | `qwen2` | 文本 | |
-| Qwen2-MoE | `qwen2_moe` | 文本 | |
-| Qwen2-VL | `qwen2_vl` | 文本、图像 | |
-| Qwen2.5-VL | `qwen2_5_vl` | 文本、图像 | |
-| Qwen3 | `qwen3` | 文本 | |
-| Qwen3-MoE | `qwen3_moe` | 文本 | |
-| Qwen3-Next | `qwen3_next` | 文本 | |
-| Qwen3-VL | `qwen3_vl` | 文本、图像 | |
-| Qwen3-VL-MoE | `qwen3_vl_moe` | 文本、图像 | |
-| Qwen3.5 | `qwen3_5` | 文本、图像 | |
-| Qwen3.5-MoE | `qwen3_5_moe` | 文本、图像 | |
-| Qwen2.5-Omni | `qwen2_5_omni` | 文本、图像、视频、音频 | 只加载 thinker，不加载语音解码器 |
-| Qwen3-Omni | `qwen3_omni_moe` | 文本、图像、视频、音频 | 只加载 thinker |
-| Gemma、Gemma 2 | `gemma`、`gemma2` | 文本 | |
-| Gemma 3 | `gemma3`、`gemma3_text` | 文本 | 文本路径测过 |
-| Gemma 3n | `gemma3n`、`gemma3n_text` | 文本 | 不支持图像 |
-| Gemma 4 | `gemma4`、`gemma4_text`、`gemma4_unified` | 文本、图像、视频、音频 | |
-| Llama、Llama 3 | `llama` | 文本 | |
-| Llama 4 | `llama4`、`llama4_text` | 文本、图像 | `llama4_text` 只有文本 |
-| Llama 3.2 Vision | `mllama` | 文本、图像 | |
-| Mistral、Mistral 3 | `mistral`、`mistral3` | 文本 | |
-| Ministral | `ministral` | 文本 | |
-| Mixtral | `mixtral` | 文本 | |
-| Pixtral | `pixtral` | 文本、图像 | |
-| InternVL | `internvl`、`internvl_chat` | 文本、图像 | |
-| Intern-S1 | `interns1` | 文本、图像 | |
-| ModernBERT | `modernbert` | 文本 | 仅 `slot` 和 `pointer` |
-| BERT | `bert` | 文本 | 仅 `slot` 和 `pointer` |
-| RoBERTa | `roberta` | 文本 | 仅 `slot` 和 `pointer` |
-| XLM-RoBERTa | `xlm-roberta` | 文本 | 仅 `slot` 和 `pointer` |
-| DeBERTa、DeBERTa-v2 | `deberta`、`deberta-v2` | 文本 | 仅 `slot` 和 `pointer` |
-| 其他因果语言模型 | — | 看配置 | `GenericFamily` 推断模型类、主干和 LoRA 目标 |
+| 检查点 | 输入 | 跑过什么 |
+| --- | --- | --- |
+| [Qwen/Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B) | 文本、图像 | 全参数 `marker` 训练；`marker`、`slot`、`pointer` 的 LoRA 冒烟，含图像 |
+| [Qwen/Qwen3.5-2B](https://huggingface.co/Qwen/Qwen3.5-2B) | 文本、图像 | LoRA `marker` 训练 |
+| [Qwen/Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B) | 文本、图像 | 冒烟，含一条图像 |
+| [Qwen/Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B) | 文本、图像 | 冒烟，含一条图像 |
+| [Qwen/Qwen2.5-Omni-3B](https://huggingface.co/Qwen/Qwen2.5-Omni-3B) | 文本、图像、视频、音频 | thinker 上的 LoRA `marker` 训练 |
+| [google/gemma-3-270m](https://huggingface.co/google/gemma-3-270m) | 文本 | 冒烟 |
+| [google/gemma-4-E2B](https://huggingface.co/google/gemma-4-E2B) | 文本 | 冒烟；音频塔和视觉塔保持冻结 |
+| [google/gemma-4-E4B](https://huggingface.co/google/gemma-4-E4B) | 文本 | 冒烟 |
+| [google/gemma-4-12B](https://huggingface.co/google/gemma-4-12B) | 文本 | 冒烟 |
+| [openbmb/MiniCPM5-1B](https://huggingface.co/openbmb/MiniCPM5-1B) | 文本 | 冒烟 |
+| [openbmb/MiniCPM5-2B](https://huggingface.co/openbmb/MiniCPM5-2B) | 文本 | 冒烟 |
+| [LiquidAI/LFM2.5-350M](https://huggingface.co/LiquidAI/LFM2.5-350M) | 文本 | 冒烟 |
+| [LiquidAI/LFM2.5-2.6B](https://huggingface.co/LiquidAI/LFM2.5-2.6B) | 文本 | 冒烟 |
+| [Rta-AILabs/Nandi-Mini-150M](https://huggingface.co/Rta-AILabs/Nandi-Mini-150M) | 文本 | 冒烟 |
+| [FrontiersMind/Lumma-0.6B-Base](https://huggingface.co/FrontiersMind/Lumma-0.6B-Base) | 文本 | 冒烟 |
 
-编码器没有 LM head，所以不能用 `marker`。更大的模型和 4bit 加载写在 [`jevtrainer/config.py`](jevtrainer/config.py)。加一个家族：[`docs/adding_model.md`](docs/adding_model.md)。
+`Qwen/Qwen3.8-27B` 和 `google/gemma-4-26B-A4B-it` 没有跑：权重大约 50 GB。同一系列的其他尺寸没有测过。`jt model list` 列出代码能识别的 `model_type`。加一个家族：[`docs/adding_model.md`](docs/adding_model.md)。
 
 ## 训练方式
 
