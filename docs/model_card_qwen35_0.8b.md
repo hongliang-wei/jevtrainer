@@ -42,6 +42,71 @@ Seven suites: Average is the unweighted mean of Easy, Original, Hard, Typed Deci
 </thead>
 <tbody>
 <tr>
+<td><a href="https://docs.typesafe.ai/api">Jev</a></td>
+<td align="right">100.00</td>
+<td align="right">98.61</td>
+<td align="right">72.07</td>
+<td align="right">73.35</td>
+<td align="right">91.29</td>
+<td align="right">89.57</td>
+<td align="right">96.29</td>
+<td align="right">88.74</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/NandhaKishorM/laya">Laya</a></td>
+<td align="right">95.83</td>
+<td align="right">72.22</td>
+<td align="right">28.83</td>
+<td align="right">35.95</td>
+<td align="right">63.87</td>
+<td align="right">92.84</td>
+<td align="right">14.84</td>
+<td align="right">57.77</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/TheoLeeCJ/SemIf-OpenJev">SemIf</a></td>
+<td align="right">100.00</td>
+<td align="right">98.61</td>
+<td align="right">61.26</td>
+<td align="right">62.80</td>
+<td align="right">85.16</td>
+<td align="right">89.22</td>
+<td align="right">92.53</td>
+<td align="right">84.23</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/jaredpalmer/kev">Kev</a></td>
+<td align="right">100.00</td>
+<td align="right">93.06</td>
+<td align="right">45.05</td>
+<td align="right">65.60</td>
+<td align="right">87.42</td>
+<td align="right">89.82</td>
+<td align="right">75.97</td>
+<td align="right">79.56</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/allebee/jevk5">JevK5</a></td>
+<td align="right">100.00</td>
+<td align="right">97.22</td>
+<td align="right">73.87</td>
+<td align="right">64.50</td>
+<td align="right">80.97</td>
+<td align="right">89.13</td>
+<td align="right">90.45</td>
+<td align="right">85.16</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
 <td>Intern-Decision-0.8B</td>
 <td align="right">97.92</td>
 <td align="right">80.56</td>
@@ -51,6 +116,32 @@ Seven suites: Average is the unweighted mean of Easy, Original, Hard, Typed Deci
 <td align="right">88.61</td>
 <td align="right">64.48</td>
 <td align="right">79.38</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Intern-Decision-2B</td>
+<td align="right">100.00</td>
+<td align="right">84.72</td>
+<td align="right">63.96</td>
+<td align="right">79.35</td>
+<td align="right">96.45</td>
+<td align="right">89.96</td>
+<td align="right">78.33</td>
+<td align="right">84.68</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Intern-Decision-4B</td>
+<td align="right">100.00</td>
+<td align="right">98.61</td>
+<td align="right">73.87</td>
+<td align="right">80.55</td>
+<td align="right">96.45</td>
+<td align="right">90.82</td>
+<td align="right">89.86</td>
+<td align="right">90.02</td>
 <td></td>
 <td></td>
 </tr>
@@ -82,6 +173,8 @@ Seven suites: Average is the unweighted mean of Easy, Original, Hard, Typed Deci
 </tr>
 </tbody>
 </table>
+
+Jev through Intern-Decision-4B are the seven-suite numbers published in the [Intern-Decision](https://github.com/internlm/Intern-Decision) README. That table does not include longdoc-dev or gui-v1.
 
 Reproduce the seven suites with the checkpoint directory:
 

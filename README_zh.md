@@ -86,6 +86,71 @@ Jev 模型读入一段状态（文本、JSON，以及可选的图像、视频或
 </thead>
 <tbody>
 <tr>
+<td><a href="https://docs.typesafe.ai/api">Jev</a></td>
+<td align="right">100.00</td>
+<td align="right">98.61</td>
+<td align="right">72.07</td>
+<td align="right">73.35</td>
+<td align="right">91.29</td>
+<td align="right">89.57</td>
+<td align="right">96.29</td>
+<td align="right">88.74</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/NandhaKishorM/laya">Laya</a></td>
+<td align="right">95.83</td>
+<td align="right">72.22</td>
+<td align="right">28.83</td>
+<td align="right">35.95</td>
+<td align="right">63.87</td>
+<td align="right">92.84</td>
+<td align="right">14.84</td>
+<td align="right">57.77</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/TheoLeeCJ/SemIf-OpenJev">SemIf</a></td>
+<td align="right">100.00</td>
+<td align="right">98.61</td>
+<td align="right">61.26</td>
+<td align="right">62.80</td>
+<td align="right">85.16</td>
+<td align="right">89.22</td>
+<td align="right">92.53</td>
+<td align="right">84.23</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/jaredpalmer/kev">Kev</a></td>
+<td align="right">100.00</td>
+<td align="right">93.06</td>
+<td align="right">45.05</td>
+<td align="right">65.60</td>
+<td align="right">87.42</td>
+<td align="right">89.82</td>
+<td align="right">75.97</td>
+<td align="right">79.56</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/allebee/jevk5">JevK5</a></td>
+<td align="right">100.00</td>
+<td align="right">97.22</td>
+<td align="right">73.87</td>
+<td align="right">64.50</td>
+<td align="right">80.97</td>
+<td align="right">89.13</td>
+<td align="right">90.45</td>
+<td align="right">85.16</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
 <td>Intern-Decision-0.8B</td>
 <td align="right">97.92</td>
 <td align="right">80.56</td>
@@ -95,6 +160,32 @@ Jev 模型读入一段状态（文本、JSON，以及可选的图像、视频或
 <td align="right">88.61</td>
 <td align="right">64.48</td>
 <td align="right">79.38</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Intern-Decision-2B</td>
+<td align="right">100.00</td>
+<td align="right">84.72</td>
+<td align="right">63.96</td>
+<td align="right">79.35</td>
+<td align="right">96.45</td>
+<td align="right">89.96</td>
+<td align="right">78.33</td>
+<td align="right">84.68</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Intern-Decision-4B</td>
+<td align="right">100.00</td>
+<td align="right">98.61</td>
+<td align="right">73.87</td>
+<td align="right">80.55</td>
+<td align="right">96.45</td>
+<td align="right">90.82</td>
+<td align="right">89.86</td>
+<td align="right">90.02</td>
 <td></td>
 <td></td>
 </tr>
@@ -126,6 +217,8 @@ Jev 模型读入一段状态（文本、JSON，以及可选的图像、视频或
 </tr>
 </tbody>
 </table>
+
+Jev 到 Intern-Decision-4B 的七项分数来自 [Intern-Decision](https://github.com/internlm/Intern-Decision) 的 README。那张表里没有 longdoc-dev 和 gui-v1。
 
 每个文件里的 `dataset:` 就是训练用的数据集（名字、采样上限、分组方式），超参也在同一份文件里。
 
@@ -527,21 +620,21 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 
 先装和 GPU 匹配的 CUDA 版 PyTorch，再装本库。`pip install -e .` 会装下表里除 PyTorch 以外的每一行。版本是 [`pyproject.toml`](pyproject.toml) 里的最低要求。
 
-| 包 | 最低 | 用途 |
-| --- | --- | --- |
-| Python | 3.10 | |
-| torch | 2.4 | 训练。到 [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/) 选 CUDA 轮子 |
-| torchvision | 和这份 torch 一起装 | 图像张量 |
-| transformers | 5.5 | 加载基座模型 |
-| peft | 0.18 | LoRA |
-| accelerate | 1.10 | 训练循环、混合精度、梯度累积 |
-| datasets | 4.0 | 转换器运行时下载上游数据 |
-| safetensors | 0.4 | 保存 readout 和 LoRA |
-| pillow | 10 | 读图像 |
-| numpy | 1.26 | 音频采样 |
-| pydantic | 2.7 | 检查 YAML |
-| PyYAML | 6 | 读 YAML |
-| typer | 0.12 | `jt` 命令 |
+| 包 | 最低 |
+| --- | --- |
+| Python | 3.10 |
+| torch | 2.4 |
+| torchvision | 和这份 torch 一起装 |
+| transformers | 5.5 |
+| peft | 0.18 |
+| accelerate | 1.10 |
+| datasets | 4.0 |
+| safetensors | 0.4 |
+| pillow | 10 |
+| numpy | 1.26 |
+| pydantic | 2.7 |
+| PyYAML | 6 |
+| typer | 0.12 |
 
 ```bash
 pip install torch torchvision
@@ -550,11 +643,11 @@ pip install -e .
 
 音视频再装三个包。数据集或基座要用声音或帧时再装。
 
-| 包 | 用途 |
-| --- | --- |
-| `PATH` 上的 ffmpeg，或 `imageio-ffmpeg` | 转换器建缓存时切帧、切音频 |
-| PyAV（`av`） | 训练和评测把视频解成帧 |
-| `soundfile` | 训练和评测读缓存里的 `.flac` |
+| 包 |
+| --- |
+| `PATH` 上的 ffmpeg，或 `imageio-ffmpeg` |
+| PyAV（`av`） |
+| `soundfile` |
 
 ```bash
 pip install soundfile av imageio-ffmpeg

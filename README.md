@@ -86,6 +86,71 @@ Download a repo and pass the directory as `checkpoint`. A LoRA model still downl
 </thead>
 <tbody>
 <tr>
+<td><a href="https://docs.typesafe.ai/api">Jev</a></td>
+<td align="right">100.00</td>
+<td align="right">98.61</td>
+<td align="right">72.07</td>
+<td align="right">73.35</td>
+<td align="right">91.29</td>
+<td align="right">89.57</td>
+<td align="right">96.29</td>
+<td align="right">88.74</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/NandhaKishorM/laya">Laya</a></td>
+<td align="right">95.83</td>
+<td align="right">72.22</td>
+<td align="right">28.83</td>
+<td align="right">35.95</td>
+<td align="right">63.87</td>
+<td align="right">92.84</td>
+<td align="right">14.84</td>
+<td align="right">57.77</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/TheoLeeCJ/SemIf-OpenJev">SemIf</a></td>
+<td align="right">100.00</td>
+<td align="right">98.61</td>
+<td align="right">61.26</td>
+<td align="right">62.80</td>
+<td align="right">85.16</td>
+<td align="right">89.22</td>
+<td align="right">92.53</td>
+<td align="right">84.23</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/jaredpalmer/kev">Kev</a></td>
+<td align="right">100.00</td>
+<td align="right">93.06</td>
+<td align="right">45.05</td>
+<td align="right">65.60</td>
+<td align="right">87.42</td>
+<td align="right">89.82</td>
+<td align="right">75.97</td>
+<td align="right">79.56</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://github.com/allebee/jevk5">JevK5</a></td>
+<td align="right">100.00</td>
+<td align="right">97.22</td>
+<td align="right">73.87</td>
+<td align="right">64.50</td>
+<td align="right">80.97</td>
+<td align="right">89.13</td>
+<td align="right">90.45</td>
+<td align="right">85.16</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
 <td>Intern-Decision-0.8B</td>
 <td align="right">97.92</td>
 <td align="right">80.56</td>
@@ -95,6 +160,32 @@ Download a repo and pass the directory as `checkpoint`. A LoRA model still downl
 <td align="right">88.61</td>
 <td align="right">64.48</td>
 <td align="right">79.38</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Intern-Decision-2B</td>
+<td align="right">100.00</td>
+<td align="right">84.72</td>
+<td align="right">63.96</td>
+<td align="right">79.35</td>
+<td align="right">96.45</td>
+<td align="right">89.96</td>
+<td align="right">78.33</td>
+<td align="right">84.68</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Intern-Decision-4B</td>
+<td align="right">100.00</td>
+<td align="right">98.61</td>
+<td align="right">73.87</td>
+<td align="right">80.55</td>
+<td align="right">96.45</td>
+<td align="right">90.82</td>
+<td align="right">89.86</td>
+<td align="right">90.02</td>
 <td></td>
 <td></td>
 </tr>
@@ -126,6 +217,8 @@ Download a repo and pass the directory as `checkpoint`. A LoRA model still downl
 </tr>
 </tbody>
 </table>
+
+Jev through Intern-Decision-4B are the seven-suite numbers published in the [Intern-Decision](https://github.com/internlm/Intern-Decision) README. That table does not include longdoc-dev or gui-v1.
 
 Each file's `dataset:` block is the training mix (names, caps, and grouping). Hyperparameters are in the same file.
 
@@ -527,21 +620,21 @@ Adding a dataset: [`docs/adding_dataset.md`](docs/adding_dataset.md).
 
 Install a CUDA build of PyTorch that matches the GPU, then this library. `pip install -e .` installs every row below except PyTorch itself. Versions are the minimum in [`pyproject.toml`](pyproject.toml).
 
-| Package | Minimum | What it is for |
-| --- | --- | --- |
-| Python | 3.10 | |
-| torch | 2.4 | the training step. Take the CUDA wheel from [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/) |
-| torchvision | installed with that torch | image tensors |
-| transformers | 5.5 | loading the base model |
-| peft | 0.18 | LoRA adapters |
-| accelerate | 1.10 | the training loop, mixed precision, gradient accumulation |
-| datasets | 4.0 | downloading an upstream set when a converter runs |
-| safetensors | 0.4 | saving the readout and a LoRA adapter |
-| pillow | 10 | reading images |
-| numpy | 1.26 | audio samples |
-| pydantic | 2.7 | checking the YAML |
-| PyYAML | 6 | reading the YAML |
-| typer | 0.12 | the `jt` command |
+| Package | Minimum |
+| --- | --- |
+| Python | 3.10 |
+| torch | 2.4 |
+| torchvision | installed with that torch |
+| transformers | 5.5 |
+| peft | 0.18 |
+| accelerate | 1.10 |
+| datasets | 4.0 |
+| safetensors | 0.4 |
+| pillow | 10 |
+| numpy | 1.26 |
+| pydantic | 2.7 |
+| PyYAML | 6 |
+| typer | 0.12 |
 
 ```bash
 pip install torch torchvision
@@ -550,11 +643,11 @@ pip install -e .
 
 Audio and video need three more packages. Install them when a dataset or the base model uses sound or frames.
 
-| Package | What it is for |
-| --- | --- |
-| ffmpeg on `PATH`, or the `imageio-ffmpeg` package | a converter cuts frames and audio while it builds the cache |
-| PyAV (`av`) | training and eval decode a video file into frames |
-| `soundfile` | training and eval read the cached `.flac` |
+| Package |
+| --- |
+| ffmpeg on `PATH`, or the `imageio-ffmpeg` package |
+| PyAV (`av`) |
+| `soundfile` |
 
 ```bash
 pip install soundfile av imageio-ffmpeg
