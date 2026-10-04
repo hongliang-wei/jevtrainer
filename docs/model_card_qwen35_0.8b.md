@@ -174,8 +174,6 @@ Seven suites: Average is the unweighted mean of Easy, Original, Hard, Typed Deci
 </tbody>
 </table>
 
-Jev through Intern-Decision-4B are the seven-suite numbers published in the [Intern-Decision](https://github.com/internlm/Intern-Decision) README. That table does not include longdoc-dev or gui-v1.
-
 Reproduce the seven suites with the checkpoint directory:
 
 ```bash

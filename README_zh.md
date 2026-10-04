@@ -218,8 +218,6 @@ Jev 模型读入一段状态（文本、JSON，以及可选的图像、视频或
 </tbody>
 </table>
 
-Jev 到 Intern-Decision-4B 的七项分数来自 [Intern-Decision](https://github.com/internlm/Intern-Decision) 的 README。那张表里没有 longdoc-dev 和 gui-v1。
-
 每个文件里的 `dataset:` 就是训练用的数据集（名字、采样上限、分组方式），超参也在同一份文件里。
 
 ```bash

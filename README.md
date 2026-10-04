@@ -218,8 +218,6 @@ Download a repo and pass the directory as `checkpoint`. A LoRA model still downl
 </tbody>
 </table>
 
-Jev through Intern-Decision-4B are the seven-suite numbers published in the [Intern-Decision](https://github.com/internlm/Intern-Decision) README. That table does not include longdoc-dev or gui-v1.
-
 Each file's `dataset:` block is the training mix (names, caps, and grouping). Hyperparameters are in the same file.
 
 ```bash
