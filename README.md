@@ -6,8 +6,8 @@
   <a href="https://github.com/hongliang-wei/jevtrainer/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/hongliang-wei/jevtrainer?style=social"></a>
   <a href="https://github.com/hongliang-wei/jevtrainer/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/hongliang-wei/jevtrainer"></a>
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img alt="License" src="https://img.shields.io/badge/license-Apache%202.0-blue"></a>
-  <a href="https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02"><img alt="Hugging Face 0.8B" src="https://img.shields.io/badge/%F0%9F%A4%97-Qwen3.5%200.8B-yellow"></a>
-  <a href="https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04"><img alt="Hugging Face Omni" src="https://img.shields.io/badge/%F0%9F%A4%97-Omni%203B-yellow"></a>
+  <a href="https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02"><img alt="JevTrainer 0.8B" src="https://img.shields.io/badge/%F0%9F%A4%97-Qwen3.5%200.8B-yellow"></a>
+  <a href="https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04"><img alt="JevTrainer Omni 3B" src="https://img.shields.io/badge/%F0%9F%A4%97-Omni%203B-yellow"></a>
 </p>
 
 <div align="center">
