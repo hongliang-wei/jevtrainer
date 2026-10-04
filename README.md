@@ -50,7 +50,7 @@ The probabilities are read out of a language model. LoRA and full fine-tuning ar
 - **Three question types**: `choice`, `score`, and `noul`, scored in one forward pass.
 - **Three readouts**: `marker` (Intern-Decision), `slot` (Bosun v3.1), `pointer` (Kev). Each works with LoRA or full fine-tuning.
 - **Modalities**: text, images, GUI screenshots, audio, video, and audio-video, on bases that can encode them.
-- **Open bases**: Qwen3.5, Qwen3, Llama-style models, ModernBERT, Qwen2.5-Omni, and Qwen3-Omni. Most other causal language models need no new code.
+- **Open bases**: the series in [Supported models](#supported-models). Any other causal language model is inferred, with no new code.
 - **333 datasets** already registered. `jt data list` and `jt bench list` show them.
 - **Serve**: `jt serve` exposes `POST /v1/systemone`.
 
@@ -73,16 +73,44 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 
 ## Supported models
 
-`jt model list` prints the families. `GenericFamily` infers most causal language models.
+`family: auto` picks the row from `config.model_type`. `jt model list` prints the same list. A checkpoint whose type is not in the table still runs through `GenericFamily`.
 
-| Family | What it covers |
-| --- | --- |
-| Qwen3.5 | Text and images |
-| Qwen3, Llama-style | Text |
-| ModernBERT | `slot` and `pointer` only |
-| `omni` | Qwen2.5-Omni and Qwen3-Omni, thinker only |
+| Model | `model_type` | Input | Notes |
+| --- | --- | --- | --- |
+| Qwen2, Qwen2.5 | `qwen2` | text | |
+| Qwen2-MoE | `qwen2_moe` | text | |
+| Qwen2-VL | `qwen2_vl` | text, image | |
+| Qwen2.5-VL | `qwen2_5_vl` | text, image | |
+| Qwen3 | `qwen3` | text | |
+| Qwen3-MoE | `qwen3_moe` | text | |
+| Qwen3-Next | `qwen3_next` | text | |
+| Qwen3-VL | `qwen3_vl` | text, image | |
+| Qwen3-VL-MoE | `qwen3_vl_moe` | text, image | |
+| Qwen3.5 | `qwen3_5` | text, image | |
+| Qwen3.5-MoE | `qwen3_5_moe` | text, image | |
+| Qwen2.5-Omni | `qwen2_5_omni` | text, image, video, audio | thinker only; the speech decoder is not loaded |
+| Qwen3-Omni | `qwen3_omni_moe` | text, image, video, audio | thinker only |
+| Gemma, Gemma 2 | `gemma`, `gemma2` | text | |
+| Gemma 3 | `gemma3`, `gemma3_text` | text | text path is tested |
+| Gemma 3n | `gemma3n`, `gemma3n_text` | text | images are not supported |
+| Gemma 4 | `gemma4`, `gemma4_text`, `gemma4_unified` | text, image, video, audio | |
+| Llama, Llama 3 | `llama` | text | |
+| Llama 4 | `llama4`, `llama4_text` | text, image | `llama4_text` is text only |
+| Llama 3.2 Vision | `mllama` | text, image | |
+| Mistral, Mistral 3 | `mistral`, `mistral3` | text | |
+| Ministral | `ministral` | text | |
+| Mixtral | `mixtral` | text | |
+| Pixtral | `pixtral` | text, image | |
+| InternVL | `internvl`, `internvl_chat` | text, image | |
+| Intern-S1 | `interns1` | text, image | |
+| ModernBERT | `modernbert` | text | `slot` and `pointer` only |
+| BERT | `bert` | text | `slot` and `pointer` only |
+| RoBERTa | `roberta` | text | `slot` and `pointer` only |
+| XLM-RoBERTa | `xlm-roberta` | text | `slot` and `pointer` only |
+| DeBERTa, DeBERTa-v2 | `deberta`, `deberta-v2` | text | `slot` and `pointer` only |
+| any other causal LM | — | from the config | `GenericFamily` infers the class, backbone, and LoRA targets |
 
-Larger models and 4-bit loading are set in [`jevtrainer/config.py`](jevtrainer/config.py). Adding a family: [`docs/adding_model.md`](docs/adding_model.md).
+Encoders have no LM head, so `marker` does not apply. Larger models and 4-bit loading are set in [`jevtrainer/config.py`](jevtrainer/config.py). Adding a family: [`docs/adding_model.md`](docs/adding_model.md).
 
 ## Training
 
