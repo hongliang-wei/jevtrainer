@@ -65,11 +65,67 @@ Jev 模型读入一段状态（文本、JSON，以及可选的图像、视频或
 
 **[weihongliang/jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02) 的评测结果。** 准确率是百分数。
 
-| 模型 | Easy | Original | Hard | Typed Decision | ToolACE | AG News | WildJailBreak | 平均 | longdoc-dev | gui-v1 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Intern-Decision-0.8B，七个套件的对照 | 97.92 | 80.56 | 52.25 | 77.35 | 94.52 | 88.61 | 64.48 | 79.38 | | |
-| Qwen/Qwen3.5-0.8B，未训练，longdoc-dev 和 gui-v1 的对照 | | | | | | | | | 40.37 | 48.29 |
-| weihongliang/jevtrainer-qwen35-0.8b-2026-10-02 | 100.00 | 84.72 | 50.45 | 71.05 | 95.81 | 92.17 | 83.44 | **82.52** | 80.90 | 66.71 |
+<table>
+<thead>
+<tr>
+<th rowspan="2">模型</th>
+<th colspan="8">七个套件。平均是这七项的不加权平均。</th>
+<th rowspan="2">longdoc-dev</th>
+<th rowspan="2">gui-v1</th>
+</tr>
+<tr>
+<th>Easy</th>
+<th>Original</th>
+<th>Hard</th>
+<th>Typed Decision</th>
+<th>ToolACE</th>
+<th>AG News</th>
+<th>WildJailBreak</th>
+<th>平均</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intern-Decision-0.8B</td>
+<td align="right">97.92</td>
+<td align="right">80.56</td>
+<td align="right">52.25</td>
+<td align="right">77.35</td>
+<td align="right">94.52</td>
+<td align="right">88.61</td>
+<td align="right">64.48</td>
+<td align="right">79.38</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Qwen/Qwen3.5-0.8B</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td align="right">40.37</td>
+<td align="right">48.29</td>
+</tr>
+<tr>
+<td>weihongliang/jevtrainer-qwen35-0.8b-2026-10-02</td>
+<td align="right">100.00</td>
+<td align="right">84.72</td>
+<td align="right">50.45</td>
+<td align="right">71.05</td>
+<td align="right">95.81</td>
+<td align="right">92.17</td>
+<td align="right">83.44</td>
+<td align="right"><b>82.52</b></td>
+<td align="right">80.90</td>
+<td align="right">66.71</td>
+</tr>
+</tbody>
+</table>
 
 每个文件里的 `dataset:` 就是训练用的数据集（名字、采样上限、分组方式），超参也在同一份文件里。
 
