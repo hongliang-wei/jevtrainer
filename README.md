@@ -1,7 +1,7 @@
 # jevtrainer
 
 Train Jev-like **typed decision models** from one YAML file. A typed decision model reads a
-state (text, JSON, optional images) and a set of questions whose answers are fixed in advance,
+state (text, JSON, and optional images, video or audio) and a set of questions whose answers are fixed in advance,
 and returns a probability for every option in one forward pass, without generating text:
 
 | type | caller gives | model returns |
@@ -11,7 +11,9 @@ and returns a probability for every option in one forward pass, without generati
 | `noul` | a yes/no proposition | P(yes) |
 
 Three readouts (how the probabilities are read from a language model) are built in, and each
-works with LoRA or full fine-tuning, text or images, and any Hugging Face causal LM:
+works with LoRA or full fine-tuning and any Hugging Face causal LM. Text, images, video and audio
+share these readouts; video and audio need a family that can encode them (Qwen2.5-Omni and
+Qwen3-Omni, family `omni`):
 
 | readout | from | prompt | read |
 |---|---|---|---|
@@ -65,11 +67,15 @@ Every source becomes the same record:
 ```
 
 `jt data list` shows the registered datasets, `jt data show NAME`, `jt data prepare all` converts
-everything into `$JEVTRAINER_CACHE`. Datasets marked `eval_only` can never enter a training mixture,
-and training records whose state (or any long text field of it) matches an evaluation record are
-dropped automatically; `--dry-run` reports how many.
+everything into `$JEVTRAINER_CACHE`. `load` reads
+`$JEVTRAINER_CACHE/records/<name>/<split>-cap<cap>-v<version>.jsonl`. If that exact file is missing
+it reuses the newest older cache of the same split and does not convert again, for text and GUI sets
+as well as audio and video. Prepare the cap a run will ask for (`jt data prepare NAME --cap N`,
+training's default cap is 100000) before starting it. Datasets marked `eval_only` can never enter a
+training mixture, and training records whose state (or any long text field of it) matches an
+evaluation record are dropped automatically; `--dry-run` reports how many.
 
-Built in (243 datasets, `jt data list`):
+Built in (333 datasets, `jt data list`):
 
 * typed-decision sets: typed_decisions, kev_suites, jebadiah_synth, mojev_mix, onejev (multimodal),
   pngwn_typed_v2 / pngwn_system_one (non-commercial); eval-only this_that_complex / this_that_spatial
@@ -117,6 +123,42 @@ Built in (243 datasets, `jt data list`):
   * preference: cvalues_rlhf, zhihu_rlhf, dpo_zh, ultrafeedback_zh, dpo_pairs_zh (translated)
   * eval-only: ceval_val, cmmlu, agieval_zh, jecqa, financeiq, chinese_safetyqa, mmbench_cn, cmmmu,
     cagui (Chinese Android GUI steps: action type + numbered element)
+* audio (`data/converters/audio_*.py`, `av_meeting.py`): emotion ravdess, savee, crema_d, tess, esd,
+  emodb; events esc50, urbansound8k, fsd50k, audioset; speech slurp, minds14, speech_commands,
+  fleurs_langid, aishell1_gender; pronunciation scores speechocean762_accuracy / fluency / prosodic /
+  total; meetings ami_same_speaker, ami_gender, voxconverse_speakers, voxconverse_overlap.
+  Eval-only: mmau_mini, mmar, mmsu, voicebench_mmsu, voicebench_openbookqa
+* video (`data/converters/video_*.py`): action ssv2, hmdb51, kinetics400, ucf101, charades; QA nextqa,
+  activitynet_qa, msvd_qa, msrvtt_qa, star, clevrer_mc, tgif_qa, m4_vitevqa; time ranges charades_sta,
+  qvhighlights, activitynet_captions; procedure coin, epic_kitchens, youcook2; captions msrvtt, vatex,
+  vatex_zh; quality and driving lsvq, nexar; screen video gui_world / gui_world_goal / gui_world_env,
+  videogui_goal, videogui_plan; synthetic genvideo, genvidbench. Eval-only: mvbench, tempcompass,
+  egoschema, longvideobench, video_mme, video_mme_sub, perception_test, perceptiontest_val
+* audio-video (`data/converters/av_*.py`): QA avqa, music_avqa; events vggsound, ave, ave_match,
+  avsbench; affect meld, mustard, urfunny, mintrec, chsims, chsims2, chsims_nonverbal, cmu_mosei,
+  crema_d_video; lip reading lrs3_transcript; violence in the clip xd_violence, xd_violence_type.
+  Eval-only: worldsense, daily_omni, omnibench, av_odyssey, av_speakerbench
+
+Clips are a `media` list on the record, referenced from the state as `<image:N>`, `<video:N>` and
+`<audio:N>`. A video item is pre-extracted frames plus 16 kHz flac, or a path decoded when the record
+is loaded. Items the state does not tag are placed in front of it. See [`jevtrainer/media.py`](jevtrainer/media.py).
+
+```yaml
+model: Qwen/Qwen2.5-Omni-3B
+readout: marker
+readout_options:
+  video_fps: 1.0          # frames kept per second of the clip; default without this is video_frames: 8
+  video_max_frames: 32
+  audio_max_s: 30
+  use_audio_in_video: true
+dataset: music_avqa,ravdess
+```
+
+`readout_options` also takes `frame_max_side`, `video_audio_max_s` and `image_pixel_budget`. The
+Omni-3B mix is [`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml). Conversion needs ffmpeg on
+`PATH` or the `imageio-ffmpeg` wheel. `JT_VIDEO_FPS=1` writes about one frame per second (capped by
+`JT_VIDEO_MAX_FRAMES`, default 32) under `media_fps1/` and a cache file ending in `-fps1`; video and
+audio-video sets then load that file. `JT_VIDEO_FPS_STRICT=1` does not fall back to the 8-frame cache.
 
 ## Benchmarks
 
@@ -127,7 +169,9 @@ BBH, MuSR, CLadder, CRUXEval, TruthfulQA, ContractNLI, ESCI, When2Call, RAGTruth
 `gui-v1` (held-out GUI splits: Multimodal-Mind2Web test task / website / domain, GUIAct web-single /
 web-multi / smartphone test, OmniACT test, WebLINX valid; 1,000 each), `zh-dev` (validation splits
 of 26 Chinese training sources), `zh-bench` (C-Eval val, CMMLU, AGIEval Chinese, JEC-QA, FinanceIQ,
-Chinese-SafetyQA), `vision-zh` (MMBench-CN, CMMMU), `gui-zh` (CAGUI).
+Chinese-SafetyQA), `vision-zh` (MMBench-CN, CMMMU), `gui-zh` (CAGUI), `av-omni` (WorldSense,
+Daily-Omni, OmniBench, AV-Odyssey, AV-SpeakerBench), `audio-bench` (MMAU-mini, MMAR, MMSU, VoiceBench),
+`video-bench` (MVBench, TempCompass, EgoSchema, LongVideoBench, Video-MME, PerceptionTest).
 
 Sources that need extra handling live in `data/converters/recovered.py`: GPQA and HLE (gated: accept
 the terms on the Hub and set `HF_TOKEN`; HLE keeps its text-only multiple-choice items), BFCL (JSON
@@ -144,6 +188,8 @@ Brier and NLL, plus macro-F1 or case-exact where the benchmark defines it.
 its backbone and LM head are, which linear layers get LoRA, and which modules are the vision tower.
 `GenericFamily` infers all of this, so most new checkpoints need no code. Tested: Qwen3.5 (text and
 VL, hybrid linear attention), Qwen3, Llama-architecture, ModernBERT (slot and pointer only).
+Qwen2.5-Omni and Qwen3-Omni use family `omni`: only the thinker is loaded, and a video's own
+soundtrack is interleaved with its frames when `use_audio_in_video` is set.
 
 Also wired up, with GPU runs still pending:
 
@@ -177,9 +223,10 @@ adapter unmerged.
 ```text
 jevtrainer/schema.py        record format
 jevtrainer/config.py        YAML configs
+jevtrainer/media.py         images, video frames, audio
 jevtrainer/data/            DatasetSpec, augmentation, mixture, converters/
 jevtrainer/readouts/        base.py + marker.py, slot.py, pointer.py
-jevtrainer/model/           load.py (LoRA/full, save/load) + families/
+jevtrainer/model/           load.py (LoRA/full, save/load) + families/ (omni.py for Qwen-Omni)
 jevtrainer/train/           trainer, losses, calibration, batching
 jevtrainer/eval/            metrics, runner, benchmarks/
 jevtrainer/serve/           /v1/systemone
