@@ -63,22 +63,13 @@ Jev 模型读入一段状态（文本、JSON，以及可选的图像、视频或
 | [weihongliang/jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02) | 2026-10-02 | Qwen3.5-0.8B，全参数，`marker` | [`configs/repro/intern_0.8b_v4.yaml`](configs/repro/intern_0.8b_v4.yaml) |
 | [weihongliang/jevtrainer-omni3b-2026-10-04](https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04) | 2026-10-04 | Qwen2.5-Omni-3B thinker，LoRA r=32，`marker` | [`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml) |
 
-[jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02) 的准确率，单位是百分数。
+**[weihongliang/jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02) 的评测结果。** 准确率是百分数。
 
-| 套件 | Intern-Decision-0.8B | 本模型 |
-| --- | ---: | ---: |
-| JevBench Easy | 97.92 | 100.00 |
-| JevBench Original | 80.56 | 84.72 |
-| JevBench Hard | 52.25 | 50.45 |
-| Typed Decision | 77.35 | 71.05 |
-| ToolACE | 94.52 | 95.81 |
-| AG News | 88.61 | 92.17 |
-| WildJailBreak | 64.48 | 83.44 |
-| 平均 | 79.38 | **82.52** |
-| longdoc-dev | 40.37 | 80.90 |
-| gui-v1 | 48.29 | 66.71 |
-
-longdoc-dev 和 gui-v1 的对照是未训练的 Qwen3.5-0.8B。上面七个套件的对照是 Intern-Decision-0.8B。
+| 模型 | Easy | Original | Hard | Typed Decision | ToolACE | AG News | WildJailBreak | 平均 | longdoc-dev | gui-v1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Intern-Decision-0.8B，七个套件的对照 | 97.92 | 80.56 | 52.25 | 77.35 | 94.52 | 88.61 | 64.48 | 79.38 | | |
+| Qwen/Qwen3.5-0.8B，未训练，longdoc-dev 和 gui-v1 的对照 | | | | | | | | | 40.37 | 48.29 |
+| weihongliang/jevtrainer-qwen35-0.8b-2026-10-02 | 100.00 | 84.72 | 50.45 | 71.05 | 95.81 | 92.17 | 83.44 | **82.52** | 80.90 | 66.71 |
 
 每个文件里的 `dataset:` 就是训练用的数据集（名字、采样上限、分组方式），超参也在同一份文件里。
 
