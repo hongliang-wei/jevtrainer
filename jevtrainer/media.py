@@ -88,10 +88,15 @@ def _pick(n_have: int, n_want: int) -> list[int]:
 def load_audio(path: Path, max_s: float, start: float = 0.0) -> np.ndarray:
     import soundfile as sf
 
-    with sf.SoundFile(str(path)) as f:
-        sr = f.samplerate
-        f.seek(int(start * sr))
-        x = f.read(int(max_s * sr), dtype="float32", always_2d=True)
+    try:
+        with sf.SoundFile(str(path)) as f:
+            sr = f.samplerate
+            f.seek(int(start * sr))
+            x = f.read(int(max_s * sr), dtype="float32", always_2d=True)
+    except (OSError, RuntimeError) as e:
+        # one corrupt file (psf_fseek) used to abort a whole benchmark
+        print(f"load_audio: unreadable {path}: {type(e).__name__}: {e}", flush=True)
+        return np.zeros(int(0.1 * SAMPLE_RATE), dtype=np.float32)
     x = x.mean(1)
     if sr != SAMPLE_RATE:
         x = _resample(x, sr)
