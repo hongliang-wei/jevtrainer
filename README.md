@@ -58,10 +58,27 @@ The probabilities are read out of a language model. LoRA and full fine-tuning ar
 
 Download a repo and pass the directory as `checkpoint`. A LoRA model still downloads its base weights.
 
-| Model | Date | Base | Training config | Result |
-| --- | --- | --- | --- | --- |
-| [weihongliang/jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02) | 2026-10-02 | Qwen3.5-0.8B, full, `marker` | [`configs/repro/intern_0.8b_v4.yaml`](configs/repro/intern_0.8b_v4.yaml) | Intern avg **82.52** (official 79.38). longdoc-dev 80.90. gui-v1 66.71 |
-| [weihongliang/jevtrainer-omni3b-2026-10-04](https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04) | 2026-10-04 | Qwen2.5-Omni-3B thinker, LoRA r=32, `marker` | [`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml) | Holdout **85.03%** (1,610 examples) |
+| Model | Date | Base | Training config |
+| --- | --- | --- | --- |
+| [weihongliang/jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02) | 2026-10-02 | Qwen3.5-0.8B, full, `marker` | [`configs/repro/intern_0.8b_v4.yaml`](configs/repro/intern_0.8b_v4.yaml) |
+| [weihongliang/jevtrainer-omni3b-2026-10-04](https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04) | 2026-10-04 | Qwen2.5-Omni-3B thinker, LoRA r=32, `marker` | [`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml) |
+
+Accuracy in percent for [jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02).
+
+| Suite | Intern-Decision-0.8B | This model |
+| --- | ---: | ---: |
+| JevBench Easy | 97.92 | 100.00 |
+| JevBench Original | 80.56 | 84.72 |
+| JevBench Hard | 52.25 | 50.45 |
+| Typed Decision | 77.35 | 71.05 |
+| ToolACE | 94.52 | 95.81 |
+| AG News | 88.61 | 92.17 |
+| WildJailBreak | 64.48 | 83.44 |
+| Average | 79.38 | **82.52** |
+| longdoc-dev | 40.37 | 80.90 |
+| gui-v1 | 48.29 | 66.71 |
+
+longdoc-dev and gui-v1 use an untrained Qwen3.5-0.8B as the control. The seven suites above use Intern-Decision-0.8B.
 
 Each file's `dataset:` block is the training mix (names, caps, and grouping). Hyperparameters are in the same file.
 
