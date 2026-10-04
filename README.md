@@ -6,8 +6,8 @@
   <a href="https://github.com/hongliang-wei/jevtrainer/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/hongliang-wei/jevtrainer?style=social"></a>
   <a href="https://github.com/hongliang-wei/jevtrainer/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/hongliang-wei/jevtrainer"></a>
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img alt="License" src="https://img.shields.io/badge/license-Apache%202.0-blue"></a>
-  <a href="https://huggingface.co/weihongliang/jev-marker-qwen35-0.8b-2026-10-02"><img alt="Hugging Face 0.8B" src="https://img.shields.io/badge/%F0%9F%A4%97-Qwen3.5%200.8B-yellow"></a>
-  <a href="https://huggingface.co/weihongliang/jev-marker-omni3b-2026-10-04"><img alt="Hugging Face Omni" src="https://img.shields.io/badge/%F0%9F%A4%97-Omni%203B-yellow"></a>
+  <a href="https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02"><img alt="Hugging Face 0.8B" src="https://img.shields.io/badge/%F0%9F%A4%97-Qwen3.5%200.8B-yellow"></a>
+  <a href="https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04"><img alt="Hugging Face Omni" src="https://img.shields.io/badge/%F0%9F%A4%97-Omni%203B-yellow"></a>
 </p>
 
 <div align="center">
@@ -60,67 +60,18 @@ Download a repo and pass the directory as `checkpoint`. A LoRA model still downl
 
 | Model | Date | Base | Training config | Result |
 | --- | --- | --- | --- | --- |
-| [weihongliang/jev-marker-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jev-marker-qwen35-0.8b-2026-10-02) | 2026-10-02 | Qwen3.5-0.8B, full, `marker` | [`configs/repro/intern_0.8b_v4.yaml`](configs/repro/intern_0.8b_v4.yaml) | Intern seven-suite average **82.52** (Intern-Decision-0.8B is 79.38) |
-| [weihongliang/jev-marker-omni3b-2026-10-04](https://huggingface.co/weihongliang/jev-marker-omni3b-2026-10-04) | 2026-10-04 | Qwen2.5-Omni-3B thinker, LoRA r=32, `marker` | [`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml) · [copy shipped with the checkpoint](https://huggingface.co/weihongliang/jev-marker-omni3b-2026-10-04/blob/main/config.yaml) | Holdout accuracy **85.03%** (1,610 examples) |
+| [weihongliang/jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02) | 2026-10-02 | Qwen3.5-0.8B, full, `marker` | [`configs/repro/intern_0.8b_v4.yaml`](configs/repro/intern_0.8b_v4.yaml) | Intern avg **82.52** (official 79.38). longdoc-dev 80.90. gui-v1 66.71 |
+| [weihongliang/jevtrainer-omni3b-2026-10-04](https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04) | 2026-10-04 | Qwen2.5-Omni-3B thinker, LoRA r=32, `marker` | [`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml) | Holdout **85.03%** (1,610 examples) |
 
 Each file's `dataset:` block is the training mix (names, caps, and grouping). Hyperparameters are in the same file.
 
 ```bash
-huggingface-cli download weihongliang/jev-marker-qwen35-0.8b-2026-10-02 --local-dir runs/jev-qwen35-0.8b
+huggingface-cli download weihongliang/jevtrainer-qwen35-0.8b-2026-10-02 --local-dir runs/jev-qwen35-0.8b
 jt eval configs/eval/intern_accuracy_v1.yaml --set checkpoint=runs/jev-qwen35-0.8b
 
-huggingface-cli download weihongliang/jev-marker-omni3b-2026-10-04 --local-dir runs/jev-omni3b
+huggingface-cli download weihongliang/jevtrainer-omni3b-2026-10-04 --local-dir runs/jev-omni3b
 jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchmarks=worldsense,omnibench
 ```
-
-### Qwen3.5-0.8B
-
-Training file: [`configs/repro/intern_0.8b_v4.yaml`](configs/repro/intern_0.8b_v4.yaml). Accuracy is in percent. The control is Intern-Decision-0.8B, scored with its published temperature 2.748.
-
-| Suite | Intern-Decision-0.8B | This model |
-| --- | ---: | ---: |
-| JevBench Easy | 97.92 | 100.00 |
-| JevBench Original | 80.56 | 84.72 |
-| JevBench Hard | 52.25 | 50.45 |
-| Typed Decision | 77.35 | 71.05 |
-| ToolACE | 94.52 | 95.81 |
-| AG News | 88.61 | 92.17 |
-| WildJailBreak | 64.48 | 83.44 |
-| Average | 79.38 | **82.52** |
-
-Hard ECE is 0.198 for this model and 0.066 for Intern-Decision-0.8B. The fitted temperature is 0.979. The step-8000 checkpoint averaged 82.64; the released weights are the final step.
-
-Two held-out suites that are absent from the training mix. The control is an untrained Qwen3.5-0.8B at temperature 1. Means are unweighted across benchmarks. Every benchmark is in [`docs/repro_intern_0.8b.md`](docs/repro_intern_0.8b.md).
-
-| Suite | This model | Untrained Qwen3.5-0.8B |
-| --- | ---: | ---: |
-| longdoc-dev | 80.90, ECE 0.0535 | 40.37, ECE 0.2170 |
-| gui-v1 | 66.71, ECE 0.0771 | 48.29, ECE 0.1054 |
-
-This checkpoint reads text and images. The mute / black-frame / shuffled-audio runs below are the Omni model.
-
-### Qwen2.5-Omni-3B
-
-Training file: [`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml).
-
-The holdout has 1,610 examples: accuracy **85.03%**, skill 79.54%, ECE 0.0096.
-
-WorldSense and OmniBench are the finished full test sets (1 frame per second, at most 32 frames, audio kept). Accuracy in percent. v3 is the previous mix, [`configs/av/omni3b_v3.yaml`](configs/av/omni3b_v3.yaml). Daily-Omni, AV-Odyssey, and AV-SpeakerBench are not in this table yet.
-
-| Benchmark | n | Base | v3 | v4, released |
-| --- | ---: | ---: | ---: | ---: |
-| WorldSense | 3155 | 34.87 | 36.80 | 37.05 |
-| OmniBench | 1141 | 43.82 | 51.10 | 49.43 |
-
-Ablation uses the v3 checkpoint on AVQA and MUSIC-AVQA, 1 frame per second. The first two rows are 1,000 examples. Mute, black frames, and shuffled audio are 500 examples. Mute drops the soundtrack. Black frames keeps the sound and replaces every frame with a black picture. Shuffled audio plays a different clip's sound.
-
-| Condition | avqa_val | music_avqa_test | music_avqa_val |
-| --- | ---: | ---: | ---: |
-| Base | 88.3 | 75.9 | 76.2 |
-| v3 | 91.7 | 87.8 | 89.1 |
-| v3, mute | 90.2 | 85.2 | 85.0 |
-| v3, black frames | 78.0 | 80.0 | 80.2 |
-| v3, shuffled audio | 87.0 | 84.4 | 81.4 |
 
 ## Supported models
 

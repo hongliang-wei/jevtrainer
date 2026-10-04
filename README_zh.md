@@ -6,8 +6,8 @@
   <a href="https://github.com/hongliang-wei/jevtrainer/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/hongliang-wei/jevtrainer?style=social"></a>
   <a href="https://github.com/hongliang-wei/jevtrainer/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/hongliang-wei/jevtrainer"></a>
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img alt="License" src="https://img.shields.io/badge/license-Apache%202.0-blue"></a>
-  <a href="https://huggingface.co/weihongliang/jev-marker-qwen35-0.8b-2026-10-02"><img alt="Hugging Face 0.8B" src="https://img.shields.io/badge/%F0%9F%A4%97-Qwen3.5%200.8B-yellow"></a>
-  <a href="https://huggingface.co/weihongliang/jev-marker-omni3b-2026-10-04"><img alt="Hugging Face Omni" src="https://img.shields.io/badge/%F0%9F%A4%97-Omni%203B-yellow"></a>
+  <a href="https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02"><img alt="Hugging Face 0.8B" src="https://img.shields.io/badge/%F0%9F%A4%97-Qwen3.5%200.8B-yellow"></a>
+  <a href="https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04"><img alt="Hugging Face Omni" src="https://img.shields.io/badge/%F0%9F%A4%97-Omni%203B-yellow"></a>
 </p>
 
 <div align="center">
@@ -60,67 +60,18 @@ Jev 模型读入一段状态（文本、JSON，以及可选的图像、视频或
 
 | 模型 | 日期 | 底座 | 训练配置 | 结果 |
 | --- | --- | --- | --- | --- |
-| [weihongliang/jev-marker-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jev-marker-qwen35-0.8b-2026-10-02) | 2026-10-02 | Qwen3.5-0.8B，全参数，`marker` | [`configs/repro/intern_0.8b_v4.yaml`](configs/repro/intern_0.8b_v4.yaml) | Intern 七套件平均 **82.52**（Intern-Decision-0.8B 为 79.38） |
-| [weihongliang/jev-marker-omni3b-2026-10-04](https://huggingface.co/weihongliang/jev-marker-omni3b-2026-10-04) | 2026-10-04 | Qwen2.5-Omni-3B thinker，LoRA r=32，`marker` | [`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml) · [随检查点发布的副本](https://huggingface.co/weihongliang/jev-marker-omni3b-2026-10-04/blob/main/config.yaml) | 保留集准确率 **85.03%**（1610 条） |
+| [weihongliang/jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02) | 2026-10-02 | Qwen3.5-0.8B，全参数，`marker` | [`configs/repro/intern_0.8b_v4.yaml`](configs/repro/intern_0.8b_v4.yaml) | Intern 平均 **82.52**（官方 79.38）。longdoc-dev 80.90。gui-v1 66.71 |
+| [weihongliang/jevtrainer-omni3b-2026-10-04](https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04) | 2026-10-04 | Qwen2.5-Omni-3B thinker，LoRA r=32，`marker` | [`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml) | 保留集 **85.03%**（1610 条） |
 
 每个文件里的 `dataset:` 就是训练用的数据集（名字、采样上限、分组方式），超参也在同一份文件里。
 
 ```bash
-huggingface-cli download weihongliang/jev-marker-qwen35-0.8b-2026-10-02 --local-dir runs/jev-qwen35-0.8b
+huggingface-cli download weihongliang/jevtrainer-qwen35-0.8b-2026-10-02 --local-dir runs/jev-qwen35-0.8b
 jt eval configs/eval/intern_accuracy_v1.yaml --set checkpoint=runs/jev-qwen35-0.8b
 
-huggingface-cli download weihongliang/jev-marker-omni3b-2026-10-04 --local-dir runs/jev-omni3b
+huggingface-cli download weihongliang/jevtrainer-omni3b-2026-10-04 --local-dir runs/jev-omni3b
 jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchmarks=worldsense,omnibench
 ```
-
-### Qwen3.5-0.8B
-
-训练文件：[`configs/repro/intern_0.8b_v4.yaml`](configs/repro/intern_0.8b_v4.yaml)。准确率是百分数。对照是 Intern-Decision-0.8B，用它公开的温度 2.748。
-
-| 套件 | Intern-Decision-0.8B | 本模型 |
-| --- | ---: | ---: |
-| JevBench Easy | 97.92 | 100.00 |
-| JevBench Original | 80.56 | 84.72 |
-| JevBench Hard | 52.25 | 50.45 |
-| Typed Decision | 77.35 | 71.05 |
-| ToolACE | 94.52 | 95.81 |
-| AG News | 88.61 | 92.17 |
-| WildJailBreak | 64.48 | 83.44 |
-| 平均 | 79.38 | **82.52** |
-
-本模型 Hard 的 ECE 是 0.198，Intern-Decision-0.8B 是 0.066。拟合温度是 0.979。step-8000 的平均是 82.64，发布的权重是最后一步。
-
-下面两套不在训练混合里。对照是未训练的 Qwen3.5-0.8B，温度 1。平均是各评测集不加权。每一项见 [`docs/repro_intern_0.8b.md`](docs/repro_intern_0.8b.md)。
-
-| 套件 | 本模型 | 未训练的 Qwen3.5-0.8B |
-| --- | ---: | ---: |
-| longdoc-dev | 80.90，ECE 0.0535 | 40.37，ECE 0.2170 |
-| gui-v1 | 66.71，ECE 0.0771 | 48.29，ECE 0.1054 |
-
-这个检查点读文字和图像。下面的静音、黑屏、换音轨是 Omni 模型的消融。
-
-### Qwen2.5-Omni-3B
-
-训练文件：[`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml)。
-
-保留集 1610 条：准确率 **85.03%**，skill 79.54%，ECE 0.0096。
-
-WorldSense 和 OmniBench 是已经跑完的完整测试集（每秒 1 帧，最多 32 帧，保留音频）。准确率是百分数。v3 是上一版混合，[`configs/av/omni3b_v3.yaml`](configs/av/omni3b_v3.yaml)。Daily-Omni、AV-Odyssey、AV-SpeakerBench 还没进这张表。
-
-| 评测集 | n | 底座 | v3 | v4（已发布） |
-| --- | ---: | ---: | ---: | ---: |
-| WorldSense | 3155 | 34.87 | 36.80 | 37.05 |
-| OmniBench | 1141 | 43.82 | 51.10 | 49.43 |
-
-消融用的是 v3 检查点，数据集是 AVQA 和 MUSIC-AVQA，每秒 1 帧。前两行是 1000 条。静音、黑屏、换音轨是 500 条。静音去掉音轨。黑屏保留声音，把每一帧换成黑图。换音轨换成另一段的声音。
-
-| 条件 | avqa_val | music_avqa_test | music_avqa_val |
-| --- | ---: | ---: | ---: |
-| 底座 | 88.3 | 75.9 | 76.2 |
-| v3 | 91.7 | 87.8 | 89.1 |
-| v3，静音 | 90.2 | 85.2 | 85.0 |
-| v3，黑屏 | 78.0 | 80.0 | 80.2 |
-| v3，换音轨 | 87.0 | 84.4 | 81.4 |
 
 ## 支持的模型
 
