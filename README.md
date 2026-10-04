@@ -203,7 +203,7 @@ Download a repo and pass the directory as `checkpoint`. A LoRA model still downl
 <td align="right">48.29</td>
 </tr>
 <tr>
-<td>jevtrainer5-0.8b</td>
+<td>jevtrainer-0.8b</td>
 <td align="right">100.00</td>
 <td align="right">84.72</td>
 <td align="right">50.45</td>
