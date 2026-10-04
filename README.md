@@ -673,8 +673,6 @@ One GPU, bf16. Memory from runs in this repo:
 | Qwen3.5-2B, LoRA | one GPU, about 24 GB in use |
 | Qwen2.5-Omni-3B, LoRA | one RTX 3090 (48 GB) |
 
-`quantize: 4bit` is how a model that does not fit is loaded. Qwen3.5-9B and Gemma 4 12B completed a short forward and backward, not a full training run, so this table has no memory number for them.
-
 ## Getting started
 
 ### Installation
