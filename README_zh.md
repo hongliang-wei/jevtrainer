@@ -107,13 +107,565 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 
 ## 数据集
 
-`jt data list` 列出全部 **333** 个数据集。`eval_only` 的数据集不进训练混合。训练样本的状态若和某条评测记录相同，会被丢掉，`--dry-run` 会报告丢掉多少。
+`jt data list` 列出全部 **333** 个数据集。标了 `(eval)` 的是 `eval_only`，不能进训练混合。训练样本的状态若和某条评测记录相同，会被丢掉，`--dry-run` 会报告丢掉多少。
 
-- **文本**：意图、主题、情感、安全、NLI、阅读、知识、工具、偏好，以及一套中文数据集
-- **图像和 GUI**：截图上的元素选择、动作类型、轨迹的下一步
-- **音频**：情感、事件、语音指令、发音打分、会议
-- **视频**：动作、问答、时间区间、步骤、字幕、屏幕录像
-- **音视频**：问答、事件、情感、唇读
+<details><summary>意图</summary>
+
+* atis
+* banking77
+* bitext_support
+* clinc150
+* massive_intent
+* massive_intent_zh
+* massive_scenario
+* massive_scenario_zh
+* trec
+
+</details>
+
+<details><summary>主题</summary>
+
+* agnews
+* dbpedia14
+* newsgroups20
+* yahoo_topics
+
+</details>
+
+<details><summary>情感</summary>
+
+* amazon_polarity
+* amazon_stars
+* amazon_zh
+* chnsenticorp
+* emotion
+* go_emotions
+* imdb
+* rotten_tomatoes
+* sst2
+* sst5
+* tweet_emotion
+* tweet_irony
+* tweet_sentiment
+* weibo_emotion
+* weibo_senti
+* yelp
+* zh_jdreview
+* zh_sentiment3
+* zh_shopping
+* zh_waimai
+
+</details>
+
+<details><summary>自然语言推理</summary>
+
+* anli
+* cb
+* cmnli
+* mnli
+* ocnli
+* qnli
+* rte
+* scitail
+* snli
+
+</details>
+
+<details><summary>阅读</summary>
+
+* boolq
+* c3
+* multirc
+* quality
+* race
+
+</details>
+
+<details><summary>知识</summary>
+
+* agieval_zh (eval)
+* arc
+* ceval_val (eval)
+* cmmlu (eval)
+* gpqa_diamond (eval)
+* gpqa_main (eval)
+* hle (eval)
+* mmlu (eval)
+* mmlu_aux
+* mmlu_pro (eval)
+* openbookqa
+* qasc
+* sciq
+* truthfulqa (eval)
+
+</details>
+
+<details><summary>常识</summary>
+
+* copa
+* csqa
+* hellaswag
+* piqa
+* social_iqa
+* winogrande
+
+</details>
+
+<details><summary>推理</summary>
+
+* bbh (eval)
+* cladder (eval)
+* logiqa
+* musr (eval)
+* reclor
+* strategyqa
+
+</details>
+
+<details><summary>语言</summary>
+
+* chid
+* cluewsc
+* cola
+* csc
+* subjectivity
+* text_correction_zh
+* wic
+
+</details>
+
+<details><summary>对话</summary>
+
+* cdconv
+* esconv
+
+</details>
+
+<details><summary>偏好</summary>
+
+* cvalues_rlhf
+* dpo_pairs_zh
+* dpo_zh
+* helpsteer2
+* helpsteer3
+* hh_rlhf
+* shp
+* skywork_pref
+* ultrafeedback
+* ultrafeedback_zh
+* zhihu_rlhf
+
+</details>
+
+<details><summary>评判</summary>
+
+* mt_bench_human
+* ppe_ifeval
+* reward_bench
+* reward_bench2
+
+</details>
+
+<details><summary>安全</summary>
+
+* aegis2
+* beavertails
+* chinese_safetyqa (eval)
+* civil_comments
+* cold
+* hate_offensive
+* jailbreak_classification
+* pku_saferlhf
+* safety_prompts_zh
+* salad
+* tc260
+* toxic_chat
+* toxicn
+* tweet_hate
+* tweet_offensive
+* wildjailbreak
+* xd_violence
+* xd_violence_type
+
+</details>
+
+<details><summary>安全检测</summary>
+
+* fake_jobs
+* phishing
+* prompt_injection
+* safeguard_injection
+
+</details>
+
+<details><summary>分类</summary>
+
+* bias_in_bios
+* hyperpartisan
+* iflytek
+* patents
+* thucnews
+* tnews
+
+</details>
+
+<details><summary>相似度</summary>
+
+* mrpc
+* paws
+* qqp
+* stsb
+
+</details>
+
+<details><summary>句对</summary>
+
+* afqmc
+* atec
+* bq_corpus
+* lcqmc
+* pawsx_zh
+* zh_stsb
+
+</details>
+
+<details><summary>检索</summary>
+
+* esci
+* mmarco_rerank_zh
+* qbqtc
+* t2_rerank
+* wiki_qa
+
+</details>
+
+<details><summary>检索增强</summary>
+
+* ragtruth
+
+</details>
+
+<details><summary>多跳</summary>
+
+* hotpotqa
+* musique
+* wiki2mh
+* wikihop
+
+</details>
+
+<details><summary>事实核查</summary>
+
+* hover
+* liar2
+
+</details>
+
+<details><summary>核验</summary>
+
+* docnli
+* halueval_summ
+* wice
+
+</details>
+
+<details><summary>数值</summary>
+
+* drop
+* tabfact
+
+</details>
+
+<details><summary>数学</summary>
+
+* gsm8k_mc
+
+</details>
+
+<details><summary>规则</summary>
+
+* sharc
+
+</details>
+
+<details><summary>工具</summary>
+
+* bfcl (eval)
+* glaive_toolcall_zh
+* glaive_tools
+* hermes_tools
+* toolace
+* when2call (eval)
+
+</details>
+
+<details><summary>Jev 格式决策</summary>
+
+* intern/agnews_test (eval)
+* intern/jevbench_easy (eval)
+* intern/jevbench_hard (eval)
+* intern/jevbench_original (eval)
+* intern/toolace_test (eval)
+* intern/typed_decisions_test (eval)
+* intern/wildjailbreak_test (eval)
+* jebadiah_synth
+* kev_suites
+* mojev_mix
+* onejev
+* pngwn_system_one
+* pngwn_typed_v2
+* this_that_complex (eval)
+* typed_decisions
+* typed_decisions_hf_test (eval)
+
+</details>
+
+<details><summary>游戏</summary>
+
+* nanojev
+
+</details>
+
+<details><summary>校准</summary>
+
+* intern/known_distribution_pilot (eval)
+
+</details>
+
+<details><summary>代码</summary>
+
+* cruxeval (eval)
+
+</details>
+
+<details><summary>法律</summary>
+
+* cail2018
+* case_hold
+* contract_nli
+* ecthr
+* jecqa (eval)
+* ledgar
+* legal_case_zh
+* legalbench_consumer_contracts
+* legalbench_cuad
+* legalbench_rules
+* maud
+* unfair_tos
+
+</details>
+
+<details><summary>金融</summary>
+
+* fin_news_topic
+* fin_phrasebank
+* fin_tweets
+* financeiq (eval)
+* fincuge_news
+* fincuge_sentiment
+* finqa
+* tatqa
+
+</details>
+
+<details><summary>医学</summary>
+
+* chip_sts
+* cmb
+* cmedqa1_rerank
+* cmedqa_rerank
+* cmexam
+* kuake_qic
+* kuake_qqr
+* kuake_qtr
+* medmcqa
+* medqa
+* pubmedqa (eval)
+
+</details>
+
+<details><summary>科学</summary>
+
+* csl
+* csl_discipline
+* qasper
+
+</details>
+
+<details><summary>垃圾信息</summary>
+
+* enron_spam
+* sms_spam
+
+</details>
+
+<details><summary>检测</summary>
+
+* hc3_zh
+
+</details>
+
+<details><summary>立场</summary>
+
+* c_stance
+
+</details>
+
+<details><summary>客服</summary>
+
+* support_tickets
+
+</details>
+
+<details><summary>时间</summary>
+
+* timeqa
+
+</details>
+
+<details><summary>空间</summary>
+
+* this_that_spatial (eval)
+
+</details>
+
+<details><summary>图像</summary>
+
+* cauldron_ai2d
+* cauldron_aokvqa
+* cauldron_iconqa
+* cauldron_scienceqa
+* cauldron_tqa
+* cmmmu (eval)
+* mmbench_cn (eval)
+* scienceqa_img
+
+</details>
+
+<details><summary>GUI 与智能体</summary>
+
+* aguvis_aitw
+* aguvis_amex
+* aguvis_android_control
+* aguvis_coat
+* aguvis_gui_odyssey
+* aguvis_guide
+* aguvis_miniwob
+* cagui (eval)
+* guiact_smartphone
+* guiact_web_multi
+* guiact_web_single
+* mind2web
+* mm_mind2web
+* omniact
+* s1_mini
+* swe_agent
+* weblinx
+
+</details>
+
+<details><summary>音频</summary>
+
+* aishell1_gender
+* ami_gender
+* ami_same_speaker
+* audioset
+* crema_d
+* emodb
+* esc50
+* esd
+* fleurs_langid
+* fsd50k
+* minds14
+* mmar (eval)
+* mmau_mini (eval)
+* mmsu (eval)
+* ravdess
+* savee
+* slurp
+* speech_commands
+* speechocean762_accuracy
+* speechocean762_fluency
+* speechocean762_prosodic
+* speechocean762_total
+* tess
+* urbansound8k
+* voicebench_mmsu (eval)
+* voicebench_openbookqa (eval)
+* voxconverse_overlap
+* voxconverse_speakers
+
+</details>
+
+<details><summary>视频</summary>
+
+* activitynet_captions
+* activitynet_qa
+* charades
+* charades_sta
+* clevrer_mc
+* coin
+* egoschema (eval)
+* epic_kitchens
+* genvidbench
+* genvideo
+* gui_world
+* gui_world_env
+* gui_world_goal
+* hmdb51
+* kinetics400
+* longvideobench (eval)
+* lsvq
+* m4_vitevqa
+* msrvtt
+* msrvtt_qa
+* msvd_qa
+* mvbench (eval)
+* nexar
+* nextqa
+* perception_test (eval)
+* perceptiontest_val (eval)
+* qvhighlights
+* ssv2
+* star
+* tempcompass (eval)
+* tgif_qa
+* ucf101
+* vatex
+* vatex_zh
+* video_mme (eval)
+* video_mme_sub (eval)
+* videogui_goal
+* videogui_plan
+* youcook2
+
+</details>
+
+<details><summary>音视频</summary>
+
+* av_odyssey (eval)
+* av_speakerbench (eval)
+* ave
+* ave_match
+* avqa
+* avsbench
+* chsims
+* chsims2
+* chsims_nonverbal
+* cmu_mosei
+* crema_d_video
+* daily_omni (eval)
+* lrs3_transcript
+* meld
+* mintrec
+* music_avqa
+* mustard
+* omnibench (eval)
+* urfunny
+* vggsound
+* worldsense (eval)
+
+</details>
 
 评测套件包括 `intern-accuracy-v1`、`core`、`gui-v1`、`zh-bench`、`av-omni`（WorldSense、Daily-Omni、OmniBench、AV-Odyssey、AV-SpeakerBench）、`audio-bench`、`video-bench`。其余用 `jt bench list` 查看。
 

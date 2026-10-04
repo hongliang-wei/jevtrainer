@@ -107,13 +107,565 @@ Defaults: `finetune: lora`, `lora.r: 16`, learning rate 1e-4 for LoRA and 1e-5 f
 
 ## Datasets
 
-`jt data list` lists all **333** datasets. An `eval_only` set stays out of a training mix. A training example whose state matches an evaluation record is dropped, and `--dry-run` reports how many.
+`jt data list` lists all **333** datasets. A name marked `(eval)` is `eval_only` and stays out of a training mix. A training example whose state matches an evaluation record is dropped, and `--dry-run` reports how many.
 
-- **Text**: intent, topic, sentiment, safety, NLI, reading, knowledge, tools, preference, and a Chinese collection
-- **Images and GUI**: element choice on a screenshot, action type, the next step of a trajectory
-- **Audio**: emotion, events, spoken commands, pronunciation scores, meetings
-- **Video**: actions, question answering, time spans, steps, subtitles, screen recordings
-- **Audio-video**: question answering, events, emotion, lip reading
+<details><summary>Intent</summary>
+
+* atis
+* banking77
+* bitext_support
+* clinc150
+* massive_intent
+* massive_intent_zh
+* massive_scenario
+* massive_scenario_zh
+* trec
+
+</details>
+
+<details><summary>Topic</summary>
+
+* agnews
+* dbpedia14
+* newsgroups20
+* yahoo_topics
+
+</details>
+
+<details><summary>Sentiment</summary>
+
+* amazon_polarity
+* amazon_stars
+* amazon_zh
+* chnsenticorp
+* emotion
+* go_emotions
+* imdb
+* rotten_tomatoes
+* sst2
+* sst5
+* tweet_emotion
+* tweet_irony
+* tweet_sentiment
+* weibo_emotion
+* weibo_senti
+* yelp
+* zh_jdreview
+* zh_sentiment3
+* zh_shopping
+* zh_waimai
+
+</details>
+
+<details><summary>Natural language inference</summary>
+
+* anli
+* cb
+* cmnli
+* mnli
+* ocnli
+* qnli
+* rte
+* scitail
+* snli
+
+</details>
+
+<details><summary>Reading</summary>
+
+* boolq
+* c3
+* multirc
+* quality
+* race
+
+</details>
+
+<details><summary>Knowledge</summary>
+
+* agieval_zh (eval)
+* arc
+* ceval_val (eval)
+* cmmlu (eval)
+* gpqa_diamond (eval)
+* gpqa_main (eval)
+* hle (eval)
+* mmlu (eval)
+* mmlu_aux
+* mmlu_pro (eval)
+* openbookqa
+* qasc
+* sciq
+* truthfulqa (eval)
+
+</details>
+
+<details><summary>Commonsense</summary>
+
+* copa
+* csqa
+* hellaswag
+* piqa
+* social_iqa
+* winogrande
+
+</details>
+
+<details><summary>Reasoning</summary>
+
+* bbh (eval)
+* cladder (eval)
+* logiqa
+* musr (eval)
+* reclor
+* strategyqa
+
+</details>
+
+<details><summary>Language</summary>
+
+* chid
+* cluewsc
+* cola
+* csc
+* subjectivity
+* text_correction_zh
+* wic
+
+</details>
+
+<details><summary>Dialogue</summary>
+
+* cdconv
+* esconv
+
+</details>
+
+<details><summary>Preference</summary>
+
+* cvalues_rlhf
+* dpo_pairs_zh
+* dpo_zh
+* helpsteer2
+* helpsteer3
+* hh_rlhf
+* shp
+* skywork_pref
+* ultrafeedback
+* ultrafeedback_zh
+* zhihu_rlhf
+
+</details>
+
+<details><summary>Judgement</summary>
+
+* mt_bench_human
+* ppe_ifeval
+* reward_bench
+* reward_bench2
+
+</details>
+
+<details><summary>Safety</summary>
+
+* aegis2
+* beavertails
+* chinese_safetyqa (eval)
+* civil_comments
+* cold
+* hate_offensive
+* jailbreak_classification
+* pku_saferlhf
+* safety_prompts_zh
+* salad
+* tc260
+* toxic_chat
+* toxicn
+* tweet_hate
+* tweet_offensive
+* wildjailbreak
+* xd_violence
+* xd_violence_type
+
+</details>
+
+<details><summary>Security</summary>
+
+* fake_jobs
+* phishing
+* prompt_injection
+* safeguard_injection
+
+</details>
+
+<details><summary>Classification</summary>
+
+* bias_in_bios
+* hyperpartisan
+* iflytek
+* patents
+* thucnews
+* tnews
+
+</details>
+
+<details><summary>Similarity</summary>
+
+* mrpc
+* paws
+* qqp
+* stsb
+
+</details>
+
+<details><summary>Sentence pairs</summary>
+
+* afqmc
+* atec
+* bq_corpus
+* lcqmc
+* pawsx_zh
+* zh_stsb
+
+</details>
+
+<details><summary>Retrieval</summary>
+
+* esci
+* mmarco_rerank_zh
+* qbqtc
+* t2_rerank
+* wiki_qa
+
+</details>
+
+<details><summary>Retrieval-augmented generation</summary>
+
+* ragtruth
+
+</details>
+
+<details><summary>Multi-hop</summary>
+
+* hotpotqa
+* musique
+* wiki2mh
+* wikihop
+
+</details>
+
+<details><summary>Fact checking</summary>
+
+* hover
+* liar2
+
+</details>
+
+<details><summary>Verification</summary>
+
+* docnli
+* halueval_summ
+* wice
+
+</details>
+
+<details><summary>Numeric</summary>
+
+* drop
+* tabfact
+
+</details>
+
+<details><summary>Math</summary>
+
+* gsm8k_mc
+
+</details>
+
+<details><summary>Rules</summary>
+
+* sharc
+
+</details>
+
+<details><summary>Tools</summary>
+
+* bfcl (eval)
+* glaive_toolcall_zh
+* glaive_tools
+* hermes_tools
+* toolace
+* when2call (eval)
+
+</details>
+
+<details><summary>Jev-format decisions</summary>
+
+* intern/agnews_test (eval)
+* intern/jevbench_easy (eval)
+* intern/jevbench_hard (eval)
+* intern/jevbench_original (eval)
+* intern/toolace_test (eval)
+* intern/typed_decisions_test (eval)
+* intern/wildjailbreak_test (eval)
+* jebadiah_synth
+* kev_suites
+* mojev_mix
+* onejev
+* pngwn_system_one
+* pngwn_typed_v2
+* this_that_complex (eval)
+* typed_decisions
+* typed_decisions_hf_test (eval)
+
+</details>
+
+<details><summary>Games</summary>
+
+* nanojev
+
+</details>
+
+<details><summary>Calibration</summary>
+
+* intern/known_distribution_pilot (eval)
+
+</details>
+
+<details><summary>Code</summary>
+
+* cruxeval (eval)
+
+</details>
+
+<details><summary>Legal</summary>
+
+* cail2018
+* case_hold
+* contract_nli
+* ecthr
+* jecqa (eval)
+* ledgar
+* legal_case_zh
+* legalbench_consumer_contracts
+* legalbench_cuad
+* legalbench_rules
+* maud
+* unfair_tos
+
+</details>
+
+<details><summary>Finance</summary>
+
+* fin_news_topic
+* fin_phrasebank
+* fin_tweets
+* financeiq (eval)
+* fincuge_news
+* fincuge_sentiment
+* finqa
+* tatqa
+
+</details>
+
+<details><summary>Medical</summary>
+
+* chip_sts
+* cmb
+* cmedqa1_rerank
+* cmedqa_rerank
+* cmexam
+* kuake_qic
+* kuake_qqr
+* kuake_qtr
+* medmcqa
+* medqa
+* pubmedqa (eval)
+
+</details>
+
+<details><summary>Science</summary>
+
+* csl
+* csl_discipline
+* qasper
+
+</details>
+
+<details><summary>Spam</summary>
+
+* enron_spam
+* sms_spam
+
+</details>
+
+<details><summary>Detection</summary>
+
+* hc3_zh
+
+</details>
+
+<details><summary>Stance</summary>
+
+* c_stance
+
+</details>
+
+<details><summary>Support</summary>
+
+* support_tickets
+
+</details>
+
+<details><summary>Temporal</summary>
+
+* timeqa
+
+</details>
+
+<details><summary>Spatial</summary>
+
+* this_that_spatial (eval)
+
+</details>
+
+<details><summary>Images</summary>
+
+* cauldron_ai2d
+* cauldron_aokvqa
+* cauldron_iconqa
+* cauldron_scienceqa
+* cauldron_tqa
+* cmmmu (eval)
+* mmbench_cn (eval)
+* scienceqa_img
+
+</details>
+
+<details><summary>GUI and agents</summary>
+
+* aguvis_aitw
+* aguvis_amex
+* aguvis_android_control
+* aguvis_coat
+* aguvis_gui_odyssey
+* aguvis_guide
+* aguvis_miniwob
+* cagui (eval)
+* guiact_smartphone
+* guiact_web_multi
+* guiact_web_single
+* mind2web
+* mm_mind2web
+* omniact
+* s1_mini
+* swe_agent
+* weblinx
+
+</details>
+
+<details><summary>Audio</summary>
+
+* aishell1_gender
+* ami_gender
+* ami_same_speaker
+* audioset
+* crema_d
+* emodb
+* esc50
+* esd
+* fleurs_langid
+* fsd50k
+* minds14
+* mmar (eval)
+* mmau_mini (eval)
+* mmsu (eval)
+* ravdess
+* savee
+* slurp
+* speech_commands
+* speechocean762_accuracy
+* speechocean762_fluency
+* speechocean762_prosodic
+* speechocean762_total
+* tess
+* urbansound8k
+* voicebench_mmsu (eval)
+* voicebench_openbookqa (eval)
+* voxconverse_overlap
+* voxconverse_speakers
+
+</details>
+
+<details><summary>Video</summary>
+
+* activitynet_captions
+* activitynet_qa
+* charades
+* charades_sta
+* clevrer_mc
+* coin
+* egoschema (eval)
+* epic_kitchens
+* genvidbench
+* genvideo
+* gui_world
+* gui_world_env
+* gui_world_goal
+* hmdb51
+* kinetics400
+* longvideobench (eval)
+* lsvq
+* m4_vitevqa
+* msrvtt
+* msrvtt_qa
+* msvd_qa
+* mvbench (eval)
+* nexar
+* nextqa
+* perception_test (eval)
+* perceptiontest_val (eval)
+* qvhighlights
+* ssv2
+* star
+* tempcompass (eval)
+* tgif_qa
+* ucf101
+* vatex
+* vatex_zh
+* video_mme (eval)
+* video_mme_sub (eval)
+* videogui_goal
+* videogui_plan
+* youcook2
+
+</details>
+
+<details><summary>Audio-video</summary>
+
+* av_odyssey (eval)
+* av_speakerbench (eval)
+* ave
+* ave_match
+* avqa
+* avsbench
+* chsims
+* chsims2
+* chsims_nonverbal
+* cmu_mosei
+* crema_d_video
+* daily_omni (eval)
+* lrs3_transcript
+* meld
+* mintrec
+* music_avqa
+* mustard
+* omnibench (eval)
+* urfunny
+* vggsound
+* worldsense (eval)
+
+</details>
 
 Benchmark suites include `intern-accuracy-v1`, `core`, `gui-v1`, `zh-bench`, `av-omni` (WorldSense, Daily-Omni, OmniBench, AV-Odyssey, AV-SpeakerBench), `audio-bench`, and `video-bench`. `jt bench list` shows the rest.
 
