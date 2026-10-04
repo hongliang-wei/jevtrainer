@@ -73,27 +73,19 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 
 ## 支持的模型
 
-下面这些检查点在真实 GPU 上跑过。冒烟测试是 `scripts/smoke_models.py`：bf16、LoRA r=8、`marker`、三条文本，注明的再加一条带图记录。有训练记录的，是已经真正开跑过的。
+| 模型 | 尺寸 |
+| --- | --- |
+| [Qwen3.5](https://huggingface.co/Qwen) | 0.8B/2B/4B/9B |
+| [Qwen2.5-Omni](https://huggingface.co/Qwen) | 3B |
+| [Gemma 3](https://huggingface.co/google) | 270M |
+| [Gemma 4](https://huggingface.co/google) | E2B/E4B/12B |
+| [MiniCPM5](https://huggingface.co/openbmb) | 1B/2B |
+| [LFM2.5](https://huggingface.co/LiquidAI) | 350M/2.6B |
+| [Nandi-Mini](https://huggingface.co/Rta-AILabs) | 150M |
+| [Lumma](https://huggingface.co/FrontiersMind) | 0.6B |
 
-| 检查点 | 输入 | 跑过什么 |
-| --- | --- | --- |
-| [Qwen/Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B) | 文本、图像 | 全参数 `marker` 训练；`marker`、`slot`、`pointer` 的 LoRA 冒烟，含图像 |
-| [Qwen/Qwen3.5-2B](https://huggingface.co/Qwen/Qwen3.5-2B) | 文本、图像 | LoRA `marker` 训练 |
-| [Qwen/Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B) | 文本、图像 | 冒烟，含一条图像 |
-| [Qwen/Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B) | 文本、图像 | 冒烟，含一条图像 |
-| [Qwen/Qwen2.5-Omni-3B](https://huggingface.co/Qwen/Qwen2.5-Omni-3B) | 文本、图像、视频、音频 | thinker 上的 LoRA `marker` 训练 |
-| [google/gemma-3-270m](https://huggingface.co/google/gemma-3-270m) | 文本 | 冒烟 |
-| [google/gemma-4-E2B](https://huggingface.co/google/gemma-4-E2B) | 文本 | 冒烟；音频塔和视觉塔保持冻结 |
-| [google/gemma-4-E4B](https://huggingface.co/google/gemma-4-E4B) | 文本 | 冒烟 |
-| [google/gemma-4-12B](https://huggingface.co/google/gemma-4-12B) | 文本 | 冒烟 |
-| [openbmb/MiniCPM5-1B](https://huggingface.co/openbmb/MiniCPM5-1B) | 文本 | 冒烟 |
-| [openbmb/MiniCPM5-2B](https://huggingface.co/openbmb/MiniCPM5-2B) | 文本 | 冒烟 |
-| [LiquidAI/LFM2.5-350M](https://huggingface.co/LiquidAI/LFM2.5-350M) | 文本 | 冒烟 |
-| [LiquidAI/LFM2.5-2.6B](https://huggingface.co/LiquidAI/LFM2.5-2.6B) | 文本 | 冒烟 |
-| [Rta-AILabs/Nandi-Mini-150M](https://huggingface.co/Rta-AILabs/Nandi-Mini-150M) | 文本 | 冒烟 |
-| [FrontiersMind/Lumma-0.6B-Base](https://huggingface.co/FrontiersMind/Lumma-0.6B-Base) | 文本 | 冒烟 |
+更大的模型和 4bit 加载写在 [`jevtrainer/config.py`](jevtrainer/config.py)。加一个家族：[`docs/adding_model.md`](docs/adding_model.md)。
 
-`Qwen/Qwen3.8-27B` 和 `google/gemma-4-26B-A4B-it` 没有跑：权重大约 50 GB。同一系列的其他尺寸没有测过。`jt model list` 列出代码能识别的 `model_type`。加一个家族：[`docs/adding_model.md`](docs/adding_model.md)。
 
 ## 训练方式
 
@@ -107,563 +99,563 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 
 ## 数据集
 
-`jt data list` 列出全部 **333** 个数据集。标了 `(eval)` 的是 `eval_only`，不能进训练混合。训练样本的状态若和某条评测记录相同，会被丢掉，`--dry-run` 会报告丢掉多少。
+`jt data list` 列出全部 **333** 个数据集。每个名字都有转换器，写进 `dataset:` 就会生成记录。标了 `(eval)` 的是 `eval_only`，不能进训练混合。训练样本的状态若和某条评测记录相同，会被丢掉，`--dry-run` 会报告丢掉多少。
 
 <details><summary>意图</summary>
 
-* atis
-* banking77
-* bitext_support
-* clinc150
-* massive_intent
-* massive_intent_zh
-* massive_scenario
-* massive_scenario_zh
-* trec
+- [atis](https://huggingface.co/datasets/tuetschek/atis)
+- [banking77](https://huggingface.co/datasets/mteb/banking77)
+- [bitext_support](https://huggingface.co/datasets/bitext/Bitext-customer-support-llm-chatbot-training-dataset)
+- [clinc150](https://huggingface.co/datasets/clinc/clinc_oos)
+- [massive_intent](https://huggingface.co/datasets/mteb/amazon_massive_intent)
+- [massive_intent_zh](https://huggingface.co/datasets/mteb/amazon_massive_intent)
+- [massive_scenario](https://huggingface.co/datasets/mteb/amazon_massive_scenario)
+- [massive_scenario_zh](https://huggingface.co/datasets/mteb/amazon_massive_scenario)
+- [trec](https://huggingface.co/datasets/CogComp/trec)
 
 </details>
 
 <details><summary>主题</summary>
 
-* agnews
-* dbpedia14
-* newsgroups20
-* yahoo_topics
+- [agnews](https://huggingface.co/datasets/fancyzhx/ag_news)
+- [dbpedia14](https://huggingface.co/datasets/fancyzhx/dbpedia_14)
+- [newsgroups20](https://huggingface.co/datasets/SetFit/20_newsgroups)
+- [yahoo_topics](https://huggingface.co/datasets/community-datasets/yahoo_answers_topics)
 
 </details>
 
 <details><summary>情感</summary>
 
-* amazon_polarity
-* amazon_stars
-* amazon_zh
-* chnsenticorp
-* emotion
-* go_emotions
-* imdb
-* rotten_tomatoes
-* sst2
-* sst5
-* tweet_emotion
-* tweet_irony
-* tweet_sentiment
-* weibo_emotion
-* weibo_senti
-* yelp
-* zh_jdreview
-* zh_sentiment3
-* zh_shopping
-* zh_waimai
+- [amazon_polarity](https://huggingface.co/datasets/fancyzhx/amazon_polarity)
+- [amazon_stars](https://huggingface.co/datasets/SetFit/amazon_reviews_multi_en)
+- [amazon_zh](https://huggingface.co/datasets/SetFit/amazon_reviews_multi_zh)
+- [chnsenticorp](https://huggingface.co/datasets/lansinuote/ChnSentiCorp)
+- [emotion](https://huggingface.co/datasets/dair-ai/emotion)
+- [go_emotions](https://huggingface.co/datasets/google-research-datasets/go_emotions)
+- [imdb](https://huggingface.co/datasets/stanfordnlp/imdb)
+- [rotten_tomatoes](https://huggingface.co/datasets/cornell-movie-review-data/rotten_tomatoes)
+- [sst2](https://huggingface.co/datasets/stanfordnlp/sst2)
+- [sst5](https://huggingface.co/datasets/SetFit/sst5)
+- [tweet_emotion](https://huggingface.co/datasets/cardiffnlp/tweet_eval)
+- [tweet_irony](https://huggingface.co/datasets/cardiffnlp/tweet_eval)
+- [tweet_sentiment](https://huggingface.co/datasets/cardiffnlp/tweet_eval)
+- [weibo_emotion](https://huggingface.co/datasets/souljoy/COVID-19_weibo_emotion)
+- [weibo_senti](https://huggingface.co/datasets/dirtycomputer/weibo_senti_100k)
+- [yelp](https://huggingface.co/datasets/Yelp/yelp_review_full)
+- [zh_jdreview](https://huggingface.co/datasets/C-MTEB/JDReview-classification)
+- [zh_sentiment3](https://huggingface.co/datasets/C-MTEB/MultilingualSentiment-classification)
+- [zh_shopping](https://huggingface.co/datasets/C-MTEB/OnlineShopping-classification)
+- [zh_waimai](https://huggingface.co/datasets/C-MTEB/Waimai-classification)
 
 </details>
 
 <details><summary>自然语言推理</summary>
 
-* anli
-* cb
-* cmnli
-* mnli
-* ocnli
-* qnli
-* rte
-* scitail
-* snli
+- [anli](https://huggingface.co/datasets/facebook/anli)
+- [cb](https://huggingface.co/datasets/aps/super_glue)
+- [cmnli](https://huggingface.co/datasets/clue/clue)
+- [mnli](https://huggingface.co/datasets/nyu-mll/multi_nli)
+- [ocnli](https://huggingface.co/datasets/clue/clue)
+- [qnli](https://huggingface.co/datasets/nyu-mll/glue)
+- [rte](https://huggingface.co/datasets/nyu-mll/glue)
+- [scitail](https://huggingface.co/datasets/allenai/scitail)
+- [snli](https://huggingface.co/datasets/stanfordnlp/snli)
 
 </details>
 
 <details><summary>阅读</summary>
 
-* boolq
-* c3
-* multirc
-* quality
-* race
+- [boolq](https://huggingface.co/datasets/google/boolq)
+- [c3](https://huggingface.co/datasets/clue/clue)
+- [multirc](https://huggingface.co/datasets/aps/super_glue)
+- [quality](https://huggingface.co/datasets/emozilla/quality)
+- [race](https://huggingface.co/datasets/ehovy/race)
 
 </details>
 
 <details><summary>知识</summary>
 
-* agieval_zh (eval)
-* arc
-* ceval_val (eval)
-* cmmlu (eval)
-* gpqa_diamond (eval)
-* gpqa_main (eval)
-* hle (eval)
-* mmlu (eval)
-* mmlu_aux
-* mmlu_pro (eval)
-* openbookqa
-* qasc
-* sciq
-* truthfulqa (eval)
+- [agieval_zh](https://huggingface.co/datasets/hails/agieval) (eval)
+- [arc](https://huggingface.co/datasets/allenai/ai2_arc)
+- [ceval_val](https://huggingface.co/datasets/ceval/ceval-exam) (eval)
+- [cmmlu](https://huggingface.co/datasets/haonan-li/cmmlu) (eval)
+- [gpqa_diamond](https://huggingface.co/datasets/Idavidrein/gpqa) (eval)
+- [gpqa_main](https://huggingface.co/datasets/Idavidrein/gpqa) (eval)
+- [hle](https://huggingface.co/datasets/cais/hle) (eval)
+- [mmlu](https://huggingface.co/datasets/cais/mmlu) (eval)
+- [mmlu_aux](https://huggingface.co/datasets/cais/mmlu)
+- [mmlu_pro](https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro) (eval)
+- [openbookqa](https://huggingface.co/datasets/allenai/openbookqa)
+- [qasc](https://huggingface.co/datasets/allenai/qasc)
+- [sciq](https://huggingface.co/datasets/allenai/sciq)
+- [truthfulqa](https://huggingface.co/datasets/truthfulqa/truthful_qa) (eval)
 
 </details>
 
 <details><summary>常识</summary>
 
-* copa
-* csqa
-* hellaswag
-* piqa
-* social_iqa
-* winogrande
+- [copa](https://huggingface.co/datasets/aps/super_glue)
+- [csqa](https://huggingface.co/datasets/tau/commonsense_qa)
+- [hellaswag](https://huggingface.co/datasets/Rowan/hellaswag)
+- [piqa](https://huggingface.co/datasets/baber/piqa)
+- [social_iqa](https://huggingface.co/datasets/allenai/social_i_qa)
+- [winogrande](https://huggingface.co/datasets/allenai/winogrande)
 
 </details>
 
 <details><summary>推理</summary>
 
-* bbh (eval)
-* cladder (eval)
-* logiqa
-* musr (eval)
-* reclor
-* strategyqa
+- [bbh](https://huggingface.co/datasets/lukaemon/bbh) (eval)
+- [cladder](https://huggingface.co/datasets/causalnlp/CLadder) (eval)
+- [logiqa](https://huggingface.co/datasets/lucasmccabe/logiqa)
+- [musr](https://huggingface.co/datasets/TAUR-Lab/MuSR) (eval)
+- [reclor](https://huggingface.co/datasets/tasksource/reclor)
+- [strategyqa](https://huggingface.co/datasets/ChilleD/StrategyQA)
 
 </details>
 
 <details><summary>语言</summary>
 
-* chid
-* cluewsc
-* cola
-* csc
-* subjectivity
-* text_correction_zh
-* wic
+- [chid](https://huggingface.co/datasets/clue/clue)
+- [cluewsc](https://huggingface.co/datasets/clue/clue)
+- [cola](https://huggingface.co/datasets/nyu-mll/glue)
+- [csc](https://huggingface.co/datasets/shibing624/CSC)
+- [subjectivity](https://huggingface.co/datasets/SetFit/subj)
+- [text_correction_zh](https://huggingface.co/datasets/shibing624/chinese_text_correction)
+- [wic](https://huggingface.co/datasets/aps/super_glue)
 
 </details>
 
 <details><summary>对话</summary>
 
-* cdconv
-* esconv
+- [cdconv](https://huggingface.co/datasets/thu-coai/cdconv)
+- [esconv](https://huggingface.co/datasets/thu-coai/esconv)
 
 </details>
 
 <details><summary>偏好</summary>
 
-* cvalues_rlhf
-* dpo_pairs_zh
-* dpo_zh
-* helpsteer2
-* helpsteer3
-* hh_rlhf
-* shp
-* skywork_pref
-* ultrafeedback
-* ultrafeedback_zh
-* zhihu_rlhf
+- [cvalues_rlhf](https://huggingface.co/datasets/Skepsun/cvalues_rlhf)
+- [dpo_pairs_zh](https://huggingface.co/datasets/wenbopan/Chinese-dpo-pairs)
+- [dpo_zh](https://huggingface.co/datasets/shibing624/DPO-En-Zh-20k-Preference)
+- [helpsteer2](https://huggingface.co/datasets/nvidia/HelpSteer2)
+- [helpsteer3](https://huggingface.co/datasets/nvidia/HelpSteer3)
+- [hh_rlhf](https://huggingface.co/datasets/Anthropic/hh-rlhf)
+- [shp](https://huggingface.co/datasets/stanfordnlp/SHP)
+- [skywork_pref](https://huggingface.co/datasets/Skywork/Skywork-Reward-Preference-80K-v0.2)
+- [ultrafeedback](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized)
+- [ultrafeedback_zh](https://huggingface.co/datasets/opencsg/UltraFeedback-chinese)
+- [zhihu_rlhf](https://huggingface.co/datasets/liyucheng/zhihu_rlhf_3k)
 
 </details>
 
 <details><summary>评判</summary>
 
-* mt_bench_human
-* ppe_ifeval
-* reward_bench
-* reward_bench2
+- [mt_bench_human](https://huggingface.co/datasets/lmsys/mt_bench_human_judgments)
+- [ppe_ifeval](https://huggingface.co/datasets/lmarena-ai/PPE-IFEval-Best-of-K)
+- [reward_bench](https://huggingface.co/datasets/allenai/reward-bench)
+- [reward_bench2](https://huggingface.co/datasets/allenai/reward-bench-2)
 
 </details>
 
 <details><summary>安全</summary>
 
-* aegis2
-* beavertails
-* chinese_safetyqa (eval)
-* civil_comments
-* cold
-* hate_offensive
-* jailbreak_classification
-* pku_saferlhf
-* safety_prompts_zh
-* salad
-* tc260
-* toxic_chat
-* toxicn
-* tweet_hate
-* tweet_offensive
-* wildjailbreak
-* xd_violence
-* xd_violence_type
+- [aegis2](https://huggingface.co/datasets/nvidia/Aegis-AI-Content-Safety-Dataset-2.0)
+- [beavertails](https://huggingface.co/datasets/PKU-Alignment/BeaverTails)
+- [chinese_safetyqa](https://huggingface.co/datasets/OpenStellarTeam/Chinese-SafetyQA) (eval)
+- [civil_comments](https://huggingface.co/datasets/google/civil_comments)
+- [cold](https://huggingface.co/datasets/thu-coai/cold)
+- [hate_offensive](https://huggingface.co/datasets/tdavidson/hate_speech_offensive)
+- [jailbreak_classification](https://huggingface.co/datasets/jackhhao/jailbreak-classification)
+- [pku_saferlhf](https://huggingface.co/datasets/PKU-Alignment/PKU-SafeRLHF)
+- [safety_prompts_zh](https://huggingface.co/datasets/thu-coai/Safety-Prompts)
+- [salad](https://huggingface.co/datasets/OpenSafetyLab/Salad-Data)
+- [tc260](https://huggingface.co/datasets/BBBBBBBBBBBQ/TC260-Chinese-Safety-Prompts)
+- [toxic_chat](https://huggingface.co/datasets/lmsys/toxic-chat)
+- [toxicn](https://huggingface.co/datasets/JunyuLu/ToxiCN)
+- [tweet_hate](https://huggingface.co/datasets/cardiffnlp/tweet_eval)
+- [tweet_offensive](https://huggingface.co/datasets/cardiffnlp/tweet_eval)
+- [wildjailbreak](https://huggingface.co/datasets/allenai/wildjailbreak)
+- [xd_violence](https://huggingface.co/datasets/jherng/xd-violence)
+- [xd_violence_type](https://huggingface.co/datasets/jherng/xd-violence)
 
 </details>
 
 <details><summary>安全检测</summary>
 
-* fake_jobs
-* phishing
-* prompt_injection
-* safeguard_injection
+- [fake_jobs](https://huggingface.co/datasets/victor/real-or-fake-fake-jobposting-prediction)
+- [phishing](https://huggingface.co/datasets/zefang-liu/phishing-email-dataset)
+- [prompt_injection](https://huggingface.co/datasets/deepset/prompt-injections)
+- [safeguard_injection](https://huggingface.co/datasets/xTRam1/safe-guard-prompt-injection)
 
 </details>
 
 <details><summary>分类</summary>
 
-* bias_in_bios
-* hyperpartisan
-* iflytek
-* patents
-* thucnews
-* tnews
+- [bias_in_bios](https://huggingface.co/datasets/LabHC/bias_in_bios)
+- [hyperpartisan](https://huggingface.co/datasets/SemEvalWorkshop/hyperpartisan_news_detection)
+- [iflytek](https://huggingface.co/datasets/clue/clue)
+- [patents](https://huggingface.co/datasets/ccdv/patent-classification)
+- [thucnews](https://huggingface.co/datasets/Tongjilibo/THUCNews)
+- [tnews](https://huggingface.co/datasets/clue/clue)
 
 </details>
 
 <details><summary>相似度</summary>
 
-* mrpc
-* paws
-* qqp
-* stsb
+- [mrpc](https://huggingface.co/datasets/nyu-mll/glue)
+- [paws](https://huggingface.co/datasets/google-research-datasets/paws)
+- [qqp](https://huggingface.co/datasets/nyu-mll/glue)
+- [stsb](https://huggingface.co/datasets/sentence-transformers/stsb)
 
 </details>
 
 <details><summary>句对</summary>
 
-* afqmc
-* atec
-* bq_corpus
-* lcqmc
-* pawsx_zh
-* zh_stsb
+- [afqmc](https://huggingface.co/datasets/clue/clue)
+- [atec](https://huggingface.co/datasets/C-MTEB/ATEC)
+- [bq_corpus](https://huggingface.co/datasets/C-MTEB/BQ)
+- [lcqmc](https://huggingface.co/datasets/C-MTEB/LCQMC)
+- [pawsx_zh](https://huggingface.co/datasets/C-MTEB/PAWSX)
+- [zh_stsb](https://huggingface.co/datasets/C-MTEB/STSB)
 
 </details>
 
 <details><summary>检索</summary>
 
-* esci
-* mmarco_rerank_zh
-* qbqtc
-* t2_rerank
-* wiki_qa
+- [esci](https://huggingface.co/datasets/tasksource/esci)
+- [mmarco_rerank_zh](https://huggingface.co/datasets/C-MTEB/Mmarco-reranking)
+- [qbqtc](https://huggingface.co/datasets/C-MTEB/QBQTC)
+- [t2_rerank](https://huggingface.co/datasets/C-MTEB/T2Reranking)
+- [wiki_qa](https://huggingface.co/datasets/microsoft/wiki_qa)
 
 </details>
 
 <details><summary>检索增强</summary>
 
-* ragtruth
+- [ragtruth](https://huggingface.co/datasets/wandb/RAGTruth-processed)
 
 </details>
 
 <details><summary>多跳</summary>
 
-* hotpotqa
-* musique
-* wiki2mh
-* wikihop
+- [hotpotqa](https://huggingface.co/datasets/hotpotqa/hotpot_qa)
+- [musique](https://huggingface.co/datasets/bdsaglam/musique)
+- [wiki2mh](https://huggingface.co/datasets/framolfese/2WikiMultihopQA)
+- [wikihop](https://huggingface.co/datasets/QAngaroo/wiki_hop)
 
 </details>
 
 <details><summary>事实核查</summary>
 
-* hover
-* liar2
+- [hover](https://huggingface.co/datasets/Dzeniks/hover)
+- [liar2](https://huggingface.co/datasets/chengxuphd/liar2)
 
 </details>
 
 <details><summary>核验</summary>
 
-* docnli
-* halueval_summ
-* wice
+- [docnli](https://huggingface.co/datasets/tasksource/doc-nli)
+- [halueval_summ](https://huggingface.co/datasets/pminervini/HaluEval)
+- [wice](https://huggingface.co/datasets/tasksource/wice)
 
 </details>
 
 <details><summary>数值</summary>
 
-* drop
-* tabfact
+- [drop](https://huggingface.co/datasets/ucinlp/drop)
+- [tabfact](https://huggingface.co/datasets/table-benchmark/tabfact)
 
 </details>
 
 <details><summary>数学</summary>
 
-* gsm8k_mc
+- [gsm8k_mc](https://huggingface.co/datasets/openai/gsm8k)
 
 </details>
 
 <details><summary>规则</summary>
 
-* sharc
+- [sharc](https://huggingface.co/datasets/tasksource/sharc)
 
 </details>
 
 <details><summary>工具</summary>
 
-* bfcl (eval)
-* glaive_toolcall_zh
-* glaive_tools
-* hermes_tools
-* toolace
-* when2call (eval)
+- [bfcl](https://huggingface.co/datasets/gorilla-llm/Berkeley-Function-Calling-Leaderboard) (eval)
+- [glaive_toolcall_zh](https://huggingface.co/datasets/llamafactory/glaive_toolcall_zh)
+- [glaive_tools](https://huggingface.co/datasets/glaiveai/glaive-function-calling-v2)
+- [hermes_tools](https://huggingface.co/datasets/NousResearch/hermes-function-calling-v1)
+- [toolace](https://huggingface.co/datasets/Team-ACE/ToolACE)
+- [when2call](https://huggingface.co/datasets/nvidia/When2Call) (eval)
 
 </details>
 
 <details><summary>Jev 格式决策</summary>
 
-* intern/agnews_test (eval)
-* intern/jevbench_easy (eval)
-* intern/jevbench_hard (eval)
-* intern/jevbench_original (eval)
-* intern/toolace_test (eval)
-* intern/typed_decisions_test (eval)
-* intern/wildjailbreak_test (eval)
-* jebadiah_synth
-* kev_suites
-* mojev_mix
-* onejev
-* pngwn_system_one
-* pngwn_typed_v2
-* this_that_complex (eval)
-* typed_decisions
-* typed_decisions_hf_test (eval)
+- [intern/agnews_test](https://github.com/internlm/Intern-Decision) (eval)
+- [intern/jevbench_easy](https://github.com/internlm/Intern-Decision) (eval)
+- [intern/jevbench_hard](https://github.com/internlm/Intern-Decision) (eval)
+- [intern/jevbench_original](https://github.com/internlm/Intern-Decision) (eval)
+- [intern/toolace_test](https://github.com/internlm/Intern-Decision) (eval)
+- [intern/typed_decisions_test](https://github.com/internlm/Intern-Decision) (eval)
+- [intern/wildjailbreak_test](https://github.com/internlm/Intern-Decision) (eval)
+- [jebadiah_synth](https://huggingface.co/datasets/frontier-infra/jebadiah-synth-v2)
+- [kev_suites](https://huggingface.co/datasets/jaredpalmer/kev-suites)
+- [mojev_mix](https://huggingface.co/datasets/MoLeMo-Lab/mojev-mix)
+- [onejev](https://huggingface.co/datasets/OmniJev/OneJev-Data)
+- [pngwn_system_one](https://huggingface.co/datasets/pngwn/system-one-decisions)
+- [pngwn_typed_v2](https://huggingface.co/datasets/pngwn/typed-decisions-v2-system-one)
+- [this_that_complex](https://huggingface.co/datasets/limberc/this-that-complex-decisions) (eval)
+- [typed_decisions](https://huggingface.co/datasets/LocalLLaMA/typed-decisions)
+- [typed_decisions_hf_test](https://huggingface.co/datasets/LocalLLaMA/typed-decisions) (eval)
 
 </details>
 
 <details><summary>游戏</summary>
 
-* nanojev
+- [nanojev](https://huggingface.co/datasets/C-Tianyu/NanoJev-Data)
 
 </details>
 
 <details><summary>校准</summary>
 
-* intern/known_distribution_pilot (eval)
+- [intern/known_distribution_pilot](https://github.com/internlm/Intern-Decision) (eval)
 
 </details>
 
 <details><summary>代码</summary>
 
-* cruxeval (eval)
+- [cruxeval](https://huggingface.co/datasets/cruxeval-org/cruxeval) (eval)
 
 </details>
 
 <details><summary>法律</summary>
 
-* cail2018
-* case_hold
-* contract_nli
-* ecthr
-* jecqa (eval)
-* ledgar
-* legal_case_zh
-* legalbench_consumer_contracts
-* legalbench_cuad
-* legalbench_rules
-* maud
-* unfair_tos
+- [cail2018](https://huggingface.co/datasets/china-ai-law-challenge/cail2018)
+- [case_hold](https://huggingface.co/datasets/coastalcph/lex_glue)
+- [contract_nli](https://huggingface.co/datasets/kiddothe2b/contract-nli)
+- [ecthr](https://huggingface.co/datasets/coastalcph/lex_glue)
+- [jecqa](https://huggingface.co/datasets/hails/agieval-jec-qa-kd) (eval)
+- [ledgar](https://huggingface.co/datasets/coastalcph/lex_glue)
+- [legal_case_zh](https://huggingface.co/datasets/gehits/Chinese-Legal-Case-Classification-Dataset)
+- [legalbench_consumer_contracts](https://huggingface.co/datasets/nguha/legalbench)
+- [legalbench_cuad](https://huggingface.co/datasets/nguha/legalbench)
+- [legalbench_rules](https://huggingface.co/datasets/nguha/legalbench)
+- [maud](https://huggingface.co/datasets/theatticusproject/maud)
+- [unfair_tos](https://huggingface.co/datasets/coastalcph/lex_glue)
 
 </details>
 
 <details><summary>金融</summary>
 
-* fin_news_topic
-* fin_phrasebank
-* fin_tweets
-* financeiq (eval)
-* fincuge_news
-* fincuge_sentiment
-* finqa
-* tatqa
+- [fin_news_topic](https://huggingface.co/datasets/zeroshot/twitter-financial-news-topic)
+- [fin_phrasebank](https://huggingface.co/datasets/atrost/financial_phrasebank)
+- [fin_tweets](https://huggingface.co/datasets/zeroshot/twitter-financial-news-sentiment)
+- [financeiq](https://huggingface.co/datasets/Duxiaoman-DI/FinanceIQ) (eval)
+- [fincuge_news](https://huggingface.co/datasets/Maciel/FinCUGE-Instruction)
+- [fincuge_sentiment](https://huggingface.co/datasets/Maciel/FinCUGE-Instruction)
+- [finqa](https://huggingface.co/datasets/dreamerdeo/finqa)
+- [tatqa](https://huggingface.co/datasets/next-tat/TAT-QA)
 
 </details>
 
 <details><summary>医学</summary>
 
-* chip_sts
-* cmb
-* cmedqa1_rerank
-* cmedqa_rerank
-* cmexam
-* kuake_qic
-* kuake_qqr
-* kuake_qtr
-* medmcqa
-* medqa
-* pubmedqa (eval)
+- [chip_sts](https://huggingface.co/datasets/dirtycomputer/CBLUE-CHIP-STS)
+- [cmb](https://huggingface.co/datasets/FreedomIntelligence/CMB)
+- [cmedqa1_rerank](https://huggingface.co/datasets/C-MTEB/CMedQAv1-reranking)
+- [cmedqa_rerank](https://huggingface.co/datasets/C-MTEB/CMedQAv2-reranking)
+- [cmexam](https://huggingface.co/datasets/fzkuji/CMExam)
+- [kuake_qic](https://huggingface.co/datasets/wyp/CBlue-KUAKE-QIC)
+- [kuake_qqr](https://huggingface.co/datasets/dirtycomputer/CBLUE-KUAKE-QQR)
+- [kuake_qtr](https://huggingface.co/datasets/dirtycomputer/CBLUE-KUAKE-QTR)
+- [medmcqa](https://huggingface.co/datasets/openlifescienceai/medmcqa)
+- [medqa](https://huggingface.co/datasets/GBaker/MedQA-USMLE-4-options)
+- [pubmedqa](https://huggingface.co/datasets/qiaojin/PubMedQA) (eval)
 
 </details>
 
 <details><summary>科学</summary>
 
-* csl
-* csl_discipline
-* qasper
+- [csl](https://huggingface.co/datasets/clue/clue)
+- [csl_discipline](https://huggingface.co/datasets/C-MTEB/CLSClusteringP2P)
+- [qasper](https://huggingface.co/datasets/allenai/qasper-yesno)
 
 </details>
 
 <details><summary>垃圾信息</summary>
 
-* enron_spam
-* sms_spam
+- [enron_spam](https://huggingface.co/datasets/SetFit/enron_spam)
+- [sms_spam](https://huggingface.co/datasets/ucirvine/sms_spam)
 
 </details>
 
 <details><summary>检测</summary>
 
-* hc3_zh
+- [hc3_zh](https://huggingface.co/datasets/Hello-SimpleAI/HC3-Chinese)
 
 </details>
 
 <details><summary>立场</summary>
 
-* c_stance
+- [c_stance](https://huggingface.co/datasets/yfhe/C-STANCE-A)
 
 </details>
 
 <details><summary>客服</summary>
 
-* support_tickets
+- [support_tickets](https://huggingface.co/datasets/Tobi-Bueck/customer-support-tickets)
 
 </details>
 
 <details><summary>时间</summary>
 
-* timeqa
+- [timeqa](https://huggingface.co/datasets/hugosousa/TimeQA)
 
 </details>
 
 <details><summary>空间</summary>
 
-* this_that_spatial (eval)
+- [this_that_spatial](https://huggingface.co/datasets/limberc/this-that-spatial-bench) (eval)
 
 </details>
 
 <details><summary>图像</summary>
 
-* cauldron_ai2d
-* cauldron_aokvqa
-* cauldron_iconqa
-* cauldron_scienceqa
-* cauldron_tqa
-* cmmmu (eval)
-* mmbench_cn (eval)
-* scienceqa_img
+- [cauldron_ai2d](https://huggingface.co/datasets/HuggingFaceM4/the_cauldron)
+- [cauldron_aokvqa](https://huggingface.co/datasets/HuggingFaceM4/the_cauldron)
+- [cauldron_iconqa](https://huggingface.co/datasets/HuggingFaceM4/the_cauldron)
+- [cauldron_scienceqa](https://huggingface.co/datasets/HuggingFaceM4/the_cauldron)
+- [cauldron_tqa](https://huggingface.co/datasets/HuggingFaceM4/the_cauldron)
+- [cmmmu](https://huggingface.co/datasets/lmms-lab/CMMMU) (eval)
+- [mmbench_cn](https://huggingface.co/datasets/lmms-lab/MMBench_CN) (eval)
+- [scienceqa_img](https://huggingface.co/datasets/derek-thomas/ScienceQA)
 
 </details>
 
 <details><summary>GUI 与智能体</summary>
 
-* aguvis_aitw
-* aguvis_amex
-* aguvis_android_control
-* aguvis_coat
-* aguvis_gui_odyssey
-* aguvis_guide
-* aguvis_miniwob
-* cagui (eval)
-* guiact_smartphone
-* guiact_web_multi
-* guiact_web_single
-* mind2web
-* mm_mind2web
-* omniact
-* s1_mini
-* swe_agent
-* weblinx
+- [aguvis_aitw](https://huggingface.co/datasets/xlangai/aguvis-stage2)
+- [aguvis_amex](https://huggingface.co/datasets/xlangai/aguvis-stage2)
+- [aguvis_android_control](https://huggingface.co/datasets/xlangai/aguvis-stage2)
+- [aguvis_coat](https://huggingface.co/datasets/xlangai/aguvis-stage2)
+- [aguvis_gui_odyssey](https://huggingface.co/datasets/xlangai/aguvis-stage2)
+- [aguvis_guide](https://huggingface.co/datasets/xlangai/aguvis-stage2)
+- [aguvis_miniwob](https://huggingface.co/datasets/xlangai/aguvis-stage2)
+- [cagui](https://huggingface.co/datasets/openbmb/CAGUI) (eval)
+- [guiact_smartphone](https://huggingface.co/datasets/yiye2023/GUIAct)
+- [guiact_web_multi](https://huggingface.co/datasets/yiye2023/GUIAct)
+- [guiact_web_single](https://huggingface.co/datasets/yiye2023/GUIAct)
+- [mind2web](https://huggingface.co/datasets/osunlp/Mind2Web)
+- [mm_mind2web](https://huggingface.co/datasets/osunlp/Multimodal-Mind2Web)
+- [omniact](https://huggingface.co/datasets/Writer/omniact)
+- [s1_mini](https://huggingface.co/datasets/DavidHatley/system-one-mini-data)
+- [swe_agent](https://huggingface.co/datasets/nebius/SWE-agent-trajectories)
+- [weblinx](https://huggingface.co/datasets/McGill-NLP/WebLINX)
 
 </details>
 
 <details><summary>音频</summary>
 
-* aishell1_gender
-* ami_gender
-* ami_same_speaker
-* audioset
-* crema_d
-* emodb
-* esc50
-* esd
-* fleurs_langid
-* fsd50k
-* minds14
-* mmar (eval)
-* mmau_mini (eval)
-* mmsu (eval)
-* ravdess
-* savee
-* slurp
-* speech_commands
-* speechocean762_accuracy
-* speechocean762_fluency
-* speechocean762_prosodic
-* speechocean762_total
-* tess
-* urbansound8k
-* voicebench_mmsu (eval)
-* voicebench_openbookqa (eval)
-* voxconverse_overlap
-* voxconverse_speakers
+- [aishell1_gender](https://huggingface.co/datasets/AISHELL/AISHELL-1)
+- [ami_gender](https://huggingface.co/datasets/edinburghcstr/ami)
+- [ami_same_speaker](https://huggingface.co/datasets/edinburghcstr/ami)
+- [audioset](https://huggingface.co/datasets/agkphysics/AudioSet)
+- [crema_d](https://huggingface.co/datasets/confit/cremad-parquet)
+- [emodb](https://huggingface.co/datasets/confit/emodb-parquet)
+- [esc50](https://huggingface.co/datasets/ashraq/esc50)
+- [esd](https://huggingface.co/datasets/AbstractTTS/ESD_english)
+- [fleurs_langid](https://huggingface.co/datasets/mteb/fleurs)
+- [fsd50k](https://huggingface.co/datasets/philgzl/fsd50k)
+- [minds14](https://huggingface.co/datasets/PolyAI/minds14)
+- [mmar](https://huggingface.co/datasets/BoJack/MMAR) (eval)
+- [mmau_mini](https://huggingface.co/datasets/gamma-lab-umd/MMAU-test-mini) (eval)
+- [mmsu](https://huggingface.co/datasets/ddwang2000/MMSU) (eval)
+- [ravdess](https://huggingface.co/datasets/confit/ravdess-parquet)
+- [savee](https://huggingface.co/datasets/AbstractTTS/SAVEE)
+- [slurp](https://huggingface.co/datasets/marcel-gohsen/slurp)
+- [speech_commands](https://huggingface.co/datasets/pollen-robotics/speech-commands-v0.02)
+- [speechocean762_accuracy](https://huggingface.co/datasets/mispeech/speechocean762)
+- [speechocean762_fluency](https://huggingface.co/datasets/mispeech/speechocean762)
+- [speechocean762_prosodic](https://huggingface.co/datasets/mispeech/speechocean762)
+- [speechocean762_total](https://huggingface.co/datasets/mispeech/speechocean762)
+- [tess](https://huggingface.co/datasets/AbstractTTS/TESS)
+- [urbansound8k](https://huggingface.co/datasets/danavery/urbansound8K)
+- [voicebench_mmsu](https://huggingface.co/datasets/hlt-lab/voicebench) (eval)
+- [voicebench_openbookqa](https://huggingface.co/datasets/hlt-lab/voicebench) (eval)
+- [voxconverse_overlap](https://huggingface.co/datasets/diarizers-community/voxconverse)
+- [voxconverse_speakers](https://huggingface.co/datasets/diarizers-community/voxconverse)
 
 </details>
 
 <details><summary>视频</summary>
 
-* activitynet_captions
-* activitynet_qa
-* charades
-* charades_sta
-* clevrer_mc
-* coin
-* egoschema (eval)
-* epic_kitchens
-* genvidbench
-* genvideo
-* gui_world
-* gui_world_env
-* gui_world_goal
-* hmdb51
-* kinetics400
-* longvideobench (eval)
-* lsvq
-* m4_vitevqa
-* msrvtt
-* msrvtt_qa
-* msvd_qa
-* mvbench (eval)
-* nexar
-* nextqa
-* perception_test (eval)
-* perceptiontest_val (eval)
-* qvhighlights
-* ssv2
-* star
-* tempcompass (eval)
-* tgif_qa
-* ucf101
-* vatex
-* vatex_zh
-* video_mme (eval)
-* video_mme_sub (eval)
-* videogui_goal
-* videogui_plan
-* youcook2
+- [activitynet_captions](https://huggingface.co/datasets/friedrichor/ActivityNet_Captions)
+- [activitynet_qa](https://huggingface.co/datasets/lmms-eval/ActivityNetQA)
+- [charades](https://prior.allenai.org/projects/charades)
+- [charades_sta](https://huggingface.co/datasets/VideoSearchR1/charades-stage1_data)
+- [clevrer_mc](https://huggingface.co/datasets/ngqtrung/video-r1-clevrer-mc-v1)
+- [coin](https://coin-dataset.github.io)
+- [egoschema](https://huggingface.co/datasets/lmms-eval/egoschema) (eval)
+- [epic_kitchens](https://huggingface.co/datasets/lightly-ai/epic-kitchens-100-clips)
+- [genvidbench](https://huggingface.co/datasets/jian-0/GenVidBench)
+- [genvideo](https://huggingface.co/datasets/sshaiton/GenVideo-50k-shard)
+- [gui_world](https://huggingface.co/datasets/ONE-Lab/GUI-World)
+- [gui_world_env](https://huggingface.co/datasets/ONE-Lab/GUI-World)
+- [gui_world_goal](https://huggingface.co/datasets/ONE-Lab/GUI-World)
+- [hmdb51](https://huggingface.co/datasets/divm/hmdb51)
+- [kinetics400](https://huggingface.co/datasets/kiyoonkim/kinetics-400-targz)
+- [longvideobench](https://huggingface.co/datasets/Jialuo21/LongVideoBench) (eval)
+- [lsvq](https://huggingface.co/datasets/teowu/LSVQ-videos)
+- [m4_vitevqa](https://huggingface.co/datasets/yankie123/tea-m4vitevqa)
+- [msrvtt](https://huggingface.co/datasets/VLM2Vec/MSR-VTT)
+- [msrvtt_qa](https://huggingface.co/datasets/Rohollah903/msrvtt_qa)
+- [msvd_qa](https://huggingface.co/datasets/Rohollah903/msvd_qa)
+- [mvbench](https://huggingface.co/datasets/OpenGVLab/MVBench) (eval)
+- [nexar](https://huggingface.co/datasets/akhil0790/nexar_collision_prediction)
+- [nextqa](https://huggingface.co/datasets/lmms-eval/NExTQA)
+- [perception_test](https://huggingface.co/datasets/advaitgupta/perception_test_mcq) (eval)
+- [perceptiontest_val](https://huggingface.co/datasets/lmms-eval/PerceptionTest_Val) (eval)
+- [qvhighlights](https://huggingface.co/datasets/ayushsdev/qvhighlights-videos)
+- [ssv2](https://huggingface.co/datasets/morpheushoc/something-something-v2)
+- [star](https://huggingface.co/datasets/tdat1465/star-charades)
+- [tempcompass](https://huggingface.co/datasets/lmms-eval/TempCompass) (eval)
+- [tgif_qa](https://huggingface.co/datasets/Xiaodong/TGIF_Zero_Shot_QA_)
+- [ucf101](https://huggingface.co/datasets/quchenyuan/UCF101-ZIP)
+- [vatex](https://huggingface.co/datasets/Blazewild/Vatex_reencoded)
+- [vatex_zh](https://huggingface.co/datasets/lmms-eval/VATEX_ZH)
+- [video_mme](https://huggingface.co/datasets/lmms-lab/Video-MME) (eval)
+- [video_mme_sub](https://huggingface.co/datasets/lmms-lab/Video-MME) (eval)
+- [videogui_goal](https://huggingface.co/datasets/VideoGUI/VideoGUI-High-Plan)
+- [videogui_plan](https://huggingface.co/datasets/VideoGUI/VideoGUI-High-Plan)
+- [youcook2](https://huggingface.co/datasets/VLM2Vec/YouCook2)
 
 </details>
 
 <details><summary>音视频</summary>
 
-* av_odyssey (eval)
-* av_speakerbench (eval)
-* ave
-* ave_match
-* avqa
-* avsbench
-* chsims
-* chsims2
-* chsims_nonverbal
-* cmu_mosei
-* crema_d_video
-* daily_omni (eval)
-* lrs3_transcript
-* meld
-* mintrec
-* music_avqa
-* mustard
-* omnibench (eval)
-* urfunny
-* vggsound
-* worldsense (eval)
+- [av_odyssey](https://huggingface.co/datasets/AV-Odyssey/AV_Odyssey_Bench) (eval)
+- [av_speakerbench](https://huggingface.co/datasets/plnguyen2908/AV-SpeakerBench) (eval)
+- [ave](https://huggingface.co/datasets/UnFaZeD07/AVE-Dataset)
+- [ave_match](https://huggingface.co/datasets/UnFaZeD07/AVE-Dataset)
+- [avqa](https://huggingface.co/datasets/juyil/AVQA-videos)
+- [avsbench](https://huggingface.co/datasets/UnFaZeD07/AVSBench)
+- [chsims](https://huggingface.co/datasets/tamb2203579/CH-SIMS)
+- [chsims2](https://huggingface.co/datasets/tamb2203579/CH-SIMSv2)
+- [chsims_nonverbal](https://huggingface.co/datasets/tamb2203579/CH-SIMS)
+- [cmu_mosei](https://huggingface.co/datasets/tamb2203579/CMU-MOSEI)
+- [crema_d_video](https://huggingface.co/datasets/NoahMartinezXiang/2014_CREMA-D)
+- [daily_omni](https://huggingface.co/datasets/liarliar/Daily-Omni) (eval)
+- [lrs3_transcript](https://huggingface.co/datasets/mattymchen/lrs3-test)
+- [meld](https://huggingface.co/datasets/THUIAR/MMLA-Datasets)
+- [mintrec](https://huggingface.co/datasets/THUIAR/MMLA-Datasets)
+- [music_avqa](https://huggingface.co/datasets/UnFaZeD07/Music-AVQA)
+- [mustard](https://huggingface.co/datasets/THUIAR/MMLA-Datasets)
+- [omnibench](https://huggingface.co/datasets/m-a-p/OmniBench) (eval)
+- [urfunny](https://huggingface.co/datasets/THUIAR/MMLA-Datasets)
+- [vggsound](https://huggingface.co/datasets/11hu83/vggsound)
+- [worldsense](https://huggingface.co/datasets/lmms-lab/WorldSense) (eval)
 
 </details>
 
@@ -672,6 +664,7 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 `jt data prepare NAME --cap N` 写入 `$JEVTRAINER_CACHE`。`load` 找的是 `split-cap<cap>-v<version>.jsonl`。这个文件不在时，会用同一次划分里最新的旧缓存。训练默认 cap 是 100000。开跑前把要用的那一份准备好。
 
 加一个数据集：[`docs/adding_dataset.md`](docs/adding_dataset.md)。
+
 
 ## 环境
 
