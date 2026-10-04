@@ -594,10 +594,12 @@ jevtrainer/serve/           /v1/systemone
 configs/                    训练和评测的 YAML
 ```
 
-加一个读出：[`docs/adding_readout.md`](docs/adding_readout.md)。
+读出（readout）把模型的隐藏状态变成每个选项的概率。库里自带 `marker`、`slot`、`pointer`。新写一个是一个小类：[`docs/adding_readout.md`](docs/adding_readout.md)。
+
+改这个库的人装测试和 HTTP 服务，再跑测试。只训练的话，`pip install -e .` 就够了。
 
 ```bash
-pip install -e .[dev,serve]
+pip install -e ".[dev,serve]"
 pytest
 ```
 

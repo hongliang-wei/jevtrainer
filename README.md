@@ -594,10 +594,12 @@ jevtrainer/serve/           /v1/systemone
 configs/                    training and evaluation YAML
 ```
 
-Adding a readout: [`docs/adding_readout.md`](docs/adding_readout.md).
+A readout turns the model's hidden states into a probability for each option. The built-ins are `marker`, `slot`, and `pointer`. A new one is a small class: [`docs/adding_readout.md`](docs/adding_readout.md).
+
+People changing the library install the test runner and the HTTP server, then run the tests. Training only needs `pip install -e .`.
 
 ```bash
-pip install -e .[dev,serve]
+pip install -e ".[dev,serve]"
 pytest
 ```
 
