@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner_zh.png" width="560" alt="jevtrainer — 更容易、更高效地训练决策模型">
+  <img src="docs/banner_zh.png" width="560" alt="JevTrainer — 更容易、更高效地训练决策模型">
 </p>
 
 <p align="center">

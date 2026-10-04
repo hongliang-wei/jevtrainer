@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner.png" width="640" alt="jevtrainer — Easy and Efficient Decision Model Training">
+  <img src="docs/banner.png" width="640" alt="JevTrainer — Easy and Efficient Decision Model Training">
 </p>
 
 <p align="center">
