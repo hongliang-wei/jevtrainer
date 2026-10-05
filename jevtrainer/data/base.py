@@ -42,6 +42,15 @@ def register(spec: DatasetSpec) -> DatasetSpec:
     return spec
 
 
+def _cache_version(stem: str) -> str | None:
+    """`train-cap100000-v2` and `train-cap100000-v2-fps1` are version 2. `v1` is not `v10`."""
+    i = stem.rfind("-v")
+    if i < 0:
+        return None
+    ver = stem[i + 2:].split("-", 1)[0]
+    return ver if ver.isdigit() else None
+
+
 def load(name: str, split: str = "train", max_samples: int | None = None, seed: int = 0, cap: int = 100_000) -> list[Record]:
     """Records of one dataset split, subsampled to max_samples (deterministic by seed)."""
     if name.endswith(".jsonl") or Path(name).is_file():
@@ -55,8 +64,9 @@ def load(name: str, split: str = "train", max_samples: int | None = None, seed: 
         fps = os.environ.get("JT_VIDEO_FPS") if spec.area in ("video", "av") else None
         tag = f"-fps{fps}{os.environ.get('JT_RECORD_SUFFIX', '')}" if fps else ""  # suffix: a separate, larger build
         path = cache_dir() / "records" / name / f"{split}-cap{cap}-v{spec.version}{tag}.jsonl"
-        if not path.exists():  # converted earlier with another cap: reuse it instead of downloading everything again
+        if not path.exists():  # same converter version, another cap: reuse it instead of downloading again
             allf = sorted(path.parent.glob(f"{split}-cap*-v*.jsonl"), key=lambda p: p.stat().st_mtime)
+            allf = [p for p in allf if _cache_version(p.stem) == spec.version]
             dense = [p for p in allf if "-fps" in p.stem]
             plain = [p for p in allf if "-fps" not in p.stem]
             strict = os.environ.get("JT_VIDEO_FPS_STRICT") and fps
