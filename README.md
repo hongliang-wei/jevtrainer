@@ -12,7 +12,7 @@
 
 <div align="center">
 
-### One YAML file to train a model that answers with probabilities, not generated text
+### One YAML file to train a decision-model
 
 </div>
 
@@ -203,7 +203,7 @@ Download a repo and pass the directory as `checkpoint`. A LoRA model still downl
 <td align="right">48.29</td>
 </tr>
 <tr>
-<td>weihongliang/jevtrainer-qwen35-0.8b-2026-10-02</td>
+<td>jevtrainer-0.8b</td>
 <td align="right">100.00</td>
 <td align="right">84.72</td>
 <td align="right">50.45</td>
@@ -679,8 +679,6 @@ One GPU, bf16. Memory from runs in this repo:
 | Qwen3.5-0.8B, full fine-tune | one RTX 3090 (48 GB) |
 | Qwen3.5-2B, LoRA | one GPU, about 24 GB in use |
 | Qwen2.5-Omni-3B, LoRA | one RTX 3090 (48 GB) |
-
-`quantize: 4bit` is how a model that does not fit is loaded. Qwen3.5-9B and Gemma 4 12B completed a short forward and backward, not a full training run, so this table has no memory number for them.
 
 ## Getting started
 
