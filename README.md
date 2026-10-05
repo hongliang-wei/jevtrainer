@@ -12,7 +12,7 @@
 
 <div align="center">
 
-### One YAML file to train a model that answers with probabilities, not generated text
+### One YAML file to train a decision-model
 
 </div>
 
