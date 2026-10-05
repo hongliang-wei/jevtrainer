@@ -112,7 +112,7 @@ def videogui_plan(split, cap, rng):
     yield from _records("plan", split, cap, rng)
 
 
-register(DatasetSpec("videogui_goal", videogui_goal, ("train", "val", "test"), _REPO, "mit", "video", multimodal=True,
+register(DatasetSpec("videogui_goal", videogui_goal, ("train", "val", "test"), _REPO, "mit", "video", multimodal=True, version="2",
                      description="VideoGUI: which task query explains the change between a start and an end screen recording"))
-register(DatasetSpec("videogui_plan", videogui_plan, ("train", "val", "test"), _REPO, "mit", "video", multimodal=True,
+register(DatasetSpec("videogui_plan", videogui_plan, ("train", "val", "test"), _REPO, "mit", "video", multimodal=True, version="2",
                      description="VideoGUI: which sub-task sequence turns the start recording into the end recording"))
