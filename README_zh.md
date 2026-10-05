@@ -218,6 +218,13 @@ Jev 模型读入一段状态（文本、JSON，以及可选的图像、视频或
 </tbody>
 </table>
 
+**[weihongliang/jevtrainer-omni3b-2026-10-04](https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04) 的评测结果。** 准确率是百分数。
+
+| 模型 | WorldSense | OmniBench | Daily-Omni | AV-Odyssey | SpeakerBench |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| [Qwen2.5-Omni-3B](https://huggingface.co/Qwen/Qwen2.5-Omni-3B) | 34.87 | 43.82 | 49.79 | 31.99 | 39.69 |
+| [JevTrainer Omni 3B](https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04) | 37.05 | 49.43 | 54.05 | 36.60 | 43.69 |
+
 每个文件里的 `dataset:` 就是训练用的数据集（名字、采样上限、分组方式），超参也在同一份文件里。
 
 ```bash

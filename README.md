@@ -218,6 +218,13 @@ Download a repo and pass the directory as `checkpoint`. A LoRA model still downl
 </tbody>
 </table>
 
+**Evaluation of [weihongliang/jevtrainer-omni3b-2026-10-04](https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04).** Accuracy in percent.
+
+| Model | WorldSense | OmniBench | Daily-Omni | AV-Odyssey | SpeakerBench |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| [Qwen2.5-Omni-3B](https://huggingface.co/Qwen/Qwen2.5-Omni-3B) | 34.87 | 43.82 | 49.79 | 31.99 | 39.69 |
+| [JevTrainer Omni 3B](https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04) | 37.05 | 49.43 | 54.05 | 36.60 | 43.69 |
+
 Each file's `dataset:` block is the training mix (names, caps, and grouping). Hyperparameters are in the same file.
 
 ```bash
