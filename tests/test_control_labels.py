@@ -1,4 +1,12 @@
+from jevtrainer.data.base import _cache_version
 from jevtrainer.data.converters.control import cheapest_success, compact_label, correctness, model_tier
+
+
+def test_cache_version_does_not_reuse_an_older_converter():
+    assert _cache_version("train-cap100000-v2") == "2"
+    assert _cache_version("train-cap20000-v1-fps1") == "1"
+    assert _cache_version("train-cap100000-v2-fps1-full") == "2"
+    assert _cache_version("train-cap100000-v10") == "10"
 
 
 def test_model_tier_from_size_and_known_apis():
