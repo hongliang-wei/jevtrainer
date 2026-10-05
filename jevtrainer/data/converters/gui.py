@@ -364,23 +364,67 @@ class _Gate:
             self._until = max(self._until, time.monotonic() + seconds)
 
 
+def _hub_json(session, url: str, headers: dict, gate: _Gate):
+    """One JSON GET. A hung full-repo listing is what made the previous run sit on an idle socket."""
+    import requests
+
+    for attempt in range(6):
+        gate.wait()
+        try:
+            response = session.get(url, headers=headers, timeout=(10, 40))
+        except requests.RequestException:
+            gate.slow(min(2 * (attempt + 1), 8))
+            continue
+        try:
+            if response.status_code == 200:
+                return response.json()
+            if response.status_code == 429:
+                try:
+                    pause = float(response.headers.get("Retry-After", "1"))
+                except ValueError:
+                    pause = 1.0
+                gate.slow(min(max(pause, 0.5), 8))
+                continue
+        finally:
+            response.close()
+        gate.slow(min(2 * (attempt + 1), 8))
+    raise OSError(f"cannot fetch {url}")
+
+
 def _odyssey_index() -> dict[str, str]:
-    """Basename to `screenshots/...` path. The listing is cached; it is the call the mirror rate-limits hardest."""
+    """Basename to `screenshots/...` path.
+
+    The mirror's recursive file list of this repo never finishes. There are 100 screenshot folders;
+    each folder's listing is one short request, and the result is cached.
+    """
     cache = cache_dir() / "listings" / "OpenGVLab__GUI-Odyssey.json"
     if cache.exists():
         files = json.loads(cache.read_text(encoding="utf-8"))
     else:
-        from huggingface_hub import HfApi
+        import requests
+        from concurrent.futures import ThreadPoolExecutor
+        from huggingface_hub import get_token
 
-        files = None
-        for attempt in range(8):
-            try:
-                files = HfApi().list_repo_files("OpenGVLab/GUI-Odyssey", repo_type="dataset")
-                break
-            except Exception:  # noqa: BLE001
-                time.sleep(min(5 * (attempt + 1), 30))
-        if not files:
-            raise OSError("cannot list OpenGVLab/GUI-Odyssey")
+        base = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
+        token = get_token()
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        root = f"{base}/api/datasets/OpenGVLab/GUI-Odyssey/tree/main/screenshots"
+        gate = _Gate()
+        with requests.Session() as session:
+            folders = [x["path"] for x in _hub_json(session, root, headers, gate) if x.get("type") == "directory"]
+
+        def one(folder: str) -> list[str]:
+            url = f"{base}/api/datasets/OpenGVLab/GUI-Odyssey/tree/main/{folder}"
+            with requests.Session() as session:
+                rows = _hub_json(session, url, headers, gate)
+            return [x["path"] for x in rows if str(x.get("path", "")).endswith(".png")]
+
+        files: list[str] = []
+        with ThreadPoolExecutor(8) as pool:
+            for paths in pool.map(one, folders):
+                files.extend(paths)
+        if len(files) < 1000:
+            raise OSError(f"GUI-Odyssey listing too small: {len(files)}")
         cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text(json.dumps(files), encoding="utf-8")
     return {f.rsplit("/", 1)[-1]: f for f in files if f.startswith("screenshots/") and f.endswith(".png")}
