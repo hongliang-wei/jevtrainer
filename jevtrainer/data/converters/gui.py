@@ -16,8 +16,10 @@ from __future__ import annotations
 import base64
 import io
 import json
+import os
 import re
 import threading
+import time
 import zipfile
 from collections import Counter, defaultdict
 
@@ -315,7 +317,10 @@ def _aguvis(json_name: str, images: str, name: str, max_rows: int | None = None)
         rng.shuffle(parsed)
         parsed = [x for x in parsed if x[1]["type"] in vocab]
         n = 0
-        for (img_name, p), img in _threaded(lambda x: opener(x[0]), parsed):
+        # Odyssey is one GET per screenshot. A wider pool overlaps those with writing the record;
+        # the opener itself backs off when the mirror returns 429.
+        pool = {"workers": int(os.environ.get("JEVTRAINER_ODY_WORKERS", "48")), "chunk": 512} if images == "odyssey" else {}
+        for (img_name, p), img in _threaded(lambda x: opener(x[0]), parsed, **pool):
             if n >= min(cap, max_rows or cap):
                 return
             later = [q["step"] for q in by_episode[_EPISODE.sub("", img_name)] if len(q["prev"]) > len(p["prev"])]
@@ -341,6 +346,152 @@ def _aguvis(json_name: str, images: str, name: str, max_rows: int | None = None)
     return build
 
 
+class _Gate:
+    """Shared pause: when the mirror returns 429, every worker waits out the same window instead of retrying at once."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._until = 0.0
+
+    def wait(self):
+        with self._lock:
+            delay = self._until - time.monotonic()
+        if delay > 0:
+            time.sleep(delay)
+
+    def slow(self, seconds: float):
+        with self._lock:
+            self._until = max(self._until, time.monotonic() + seconds)
+
+
+def _odyssey_index() -> dict[str, str]:
+    """Basename to `screenshots/...` path. The listing is cached; it is the call the mirror rate-limits hardest."""
+    cache = cache_dir() / "listings" / "OpenGVLab__GUI-Odyssey.json"
+    if cache.exists():
+        files = json.loads(cache.read_text(encoding="utf-8"))
+    else:
+        from huggingface_hub import HfApi
+
+        files = None
+        for attempt in range(8):
+            try:
+                files = HfApi().list_repo_files("OpenGVLab/GUI-Odyssey", repo_type="dataset")
+                break
+            except Exception:  # noqa: BLE001
+                time.sleep(min(5 * (attempt + 1), 30))
+        if not files:
+            raise OSError("cannot list OpenGVLab/GUI-Odyssey")
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(files), encoding="utf-8")
+    return {f.rsplit("/", 1)[-1]: f for f in files if f.startswith("screenshots/") and f.endswith(".png")}
+
+
+def _odyssey_cached() -> dict[str, object]:
+    """Screenshots already stored by an earlier hf_hub_download, keyed by basename."""
+    from pathlib import Path
+
+    hub = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface")) / "hub" / "datasets--OpenGVLab--GUI-Odyssey" / "snapshots"
+    if not hub.is_dir():
+        return {}
+    return {p.name: p for p in hub.glob("*/screenshots/*/*.png") if p.is_file()}
+
+
+def _odyssey_opener(image_cls):
+    """Open a GUI-Odyssey screenshot.
+
+    `hf_hub_download` sends a HEAD before every GET, and those HEADs are what the mirror answers 429 to.
+    A direct GET into `raw/gui_odyssey/` skips that. Files already in the hub snapshot are not fetched again.
+    """
+    import requests
+    from huggingface_hub import get_token
+
+    repo = "OpenGVLab/GUI-Odyssey"
+    where = _odyssey_index()
+    cached = _odyssey_cached()
+    raw = cache_dir() / "raw" / "gui_odyssey"
+    raw.mkdir(parents=True, exist_ok=True)
+    base = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
+    token = get_token()
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    workers = int(os.environ.get("JEVTRAINER_ODY_WORKERS", "48"))
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(pool_connections=workers, pool_maxsize=workers)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    gate = _Gate()
+    inflight: dict[str, threading.Lock] = {}
+    inflight_lock = threading.Lock()
+
+    def fetch(rel: str, dest):
+        url = f"{base}/datasets/{repo}/resolve/main/{rel}"
+        part = dest.with_name(dest.name + ".part")
+        for attempt in range(6):
+            gate.wait()
+            try:
+                response = session.get(url, headers=headers, timeout=(15, 90), stream=True)
+            except requests.RequestException:
+                gate.slow(min(2 * (attempt + 1), 8))
+                continue
+            try:
+                if response.status_code == 200:
+                    with part.open("wb") as fh:
+                        for chunk in response.iter_content(1 << 16):
+                            if chunk:
+                                fh.write(chunk)
+                    if part.stat().st_size < 32:
+                        part.unlink(missing_ok=True)
+                        return None
+                    part.replace(dest)
+                    return dest
+                if response.status_code == 429:
+                    try:
+                        pause = float(response.headers.get("Retry-After", "1"))
+                    except ValueError:
+                        pause = 1.0
+                    gate.slow(min(max(pause, 0.5), 8))
+                    continue
+                if response.status_code in (500, 502, 503, 504):
+                    gate.slow(min(2 * (attempt + 1), 8))
+                    continue
+                return None
+            finally:
+                response.close()
+        return None
+
+    def open_one(path):
+        try:
+            img = image_cls.open(path)
+            img.load()
+            return img
+        except OSError:
+            return None
+
+    def open_hub(name):
+        base_name = name.rsplit("/", 1)[-1]
+        local = raw / base_name
+        if local.is_file():
+            got = open_one(local)
+            if got is not None:
+                return got
+            local.unlink(missing_ok=True)
+        got = open_one(cached[base_name]) if base_name in cached else None
+        if got is not None:
+            return got
+        rel = where.get(base_name)
+        if rel is None:
+            return None
+        with inflight_lock:
+            lock = inflight.setdefault(base_name, threading.Lock())
+        with lock:
+            got = open_one(local) if local.is_file() else None
+            if got is not None:
+                return got
+            path = fetch(rel, local)
+        return open_one(path) if path is not None else None
+
+    return open_hub
+
+
 def _image_opener(spec: str):
     from PIL import Image
 
@@ -363,21 +514,7 @@ def _image_opener(spec: str):
 
         return open_zip
     if spec == "odyssey":
-        from huggingface_hub import HfApi
-
-        repo = "OpenGVLab/GUI-Odyssey"
-        where = {f.rsplit("/", 1)[-1]: f for f in HfApi().list_repo_files(repo, repo_type="dataset") if f.startswith("screenshots/")}
-
-        def open_hub(name):
-            f = where.get(name.rsplit("/", 1)[-1])
-            if not f:
-                return None
-            try:
-                return Image.open(_dl(repo, f))
-            except OSError:
-                return None
-
-        return open_hub
+        return _odyssey_opener(Image)
     raise ValueError(spec)
 
 
