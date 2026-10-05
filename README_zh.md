@@ -52,7 +52,7 @@ Jev 模型读入一段状态（文本、JSON，以及可选的图像、视频或
 - **三种读出**：`marker`（Intern-Decision）、`slot`（Bosun v3.1）、`pointer`（Kev）。每种都能做 LoRA 或全参数微调。
 - **模态**：文本、图像、GUI 截图、音频、视频、音视频，用能编码这些模态的底座。
 - **测过的检查点**：[支持的模型](#支持的模型)里的每一个都在真实 GPU 上完成过一次前向加反向，或一次训练。
-- **333 个数据集**已经注册。`jt data list` 和 `jt bench list` 可以查看。
+- **336 个数据集**已经注册。`jt data list` 和 `jt bench list` 可以查看。
 - **服务**：`jt serve` 提供 `POST /v1/systemone`。
 
 ## 训好的模型
@@ -281,7 +281,7 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 
 ## 数据集
 
-`jt data list` 列出全部 **333** 个数据集，分成三组。每个名字都有转换器，写进 `dataset:` 就会生成记录。标了 `(eval)` 的是 `eval_only`，不能进训练混合。训练样本的状态若和某条评测记录相同，会被丢掉，`--dry-run` 会报告丢掉多少。
+`jt data list` 列出全部 **336** 个数据集，分成三组。每个名字都有转换器，写进 `dataset:` 就会生成记录。标了 `(eval)` 的是 `eval_only`，不能进训练混合。训练样本的状态若和某条评测记录相同，会被丢掉，`--dry-run` 会报告丢掉多少。
 
 图像题（一张图，没有音频也没有视频）和文字数据集放在「文字」里。GUI 动作、工具选择、智能体轨迹放在 Agent。音频、视频、音视频是第三组。
 
@@ -512,7 +512,7 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 
 </details>
 
-<details><summary>Agent (23)</summary>
+<details><summary>Agent (26)</summary>
 
 - [aguvis_aitw](https://huggingface.co/datasets/xlangai/aguvis-stage2)
 - [aguvis_amex](https://huggingface.co/datasets/xlangai/aguvis-stage2)
@@ -523,6 +523,7 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 - [aguvis_miniwob](https://huggingface.co/datasets/xlangai/aguvis-stage2)
 - [bfcl](https://huggingface.co/datasets/gorilla-llm/Berkeley-Function-Calling-Leaderboard) (eval)
 - [cagui](https://huggingface.co/datasets/openbmb/CAGUI) (eval)
+- [context_compact](https://huggingface.co/datasets/ayanami-kitasan/swe-pruner-pro-training-corpus)
 - [glaive_toolcall_zh](https://huggingface.co/datasets/llamafactory/glaive_toolcall_zh)
 - [glaive_tools](https://huggingface.co/datasets/glaiveai/glaive-function-calling-v2)
 - [guiact_smartphone](https://huggingface.co/datasets/yiye2023/GUIAct)
@@ -532,7 +533,9 @@ jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchma
 - [mind2web](https://huggingface.co/datasets/osunlp/Mind2Web)
 - [mm_mind2web](https://huggingface.co/datasets/osunlp/Multimodal-Mind2Web)
 - [omniact](https://huggingface.co/datasets/Writer/omniact)
+- [router_tier](https://huggingface.co/datasets/CARROT-LLM-Routing/SPROUT)
 - [s1_mini](https://huggingface.co/datasets/DavidHatley/system-one-mini-data)
+- [shell_gate](https://huggingface.co/datasets/tomngdev/shell-safety-v1.1)
 - [swe_agent](https://huggingface.co/datasets/nebius/SWE-agent-trajectories)
 - [toolace](https://huggingface.co/datasets/Team-ACE/ToolACE)
 - [weblinx](https://huggingface.co/datasets/McGill-NLP/WebLINX)
