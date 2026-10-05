@@ -52,7 +52,7 @@ The probabilities are read out of a language model. LoRA and full fine-tuning ar
 - **Three readouts**: `marker` (Intern-Decision), `slot` (Bosun v3.1), `pointer` (Kev). Each works with LoRA or full fine-tuning.
 - **Modalities**: text, images, GUI screenshots, audio, video, and audio-video, on bases that can encode them.
 - **Tested checkpoints**: the models in [Supported models](#supported-models). Each one has completed a real forward and backward, or a training run.
-- **333 datasets** already registered. `jt data list` and `jt bench list` show them.
+- **336 datasets** already registered. `jt data list` and `jt bench list` show them.
 - **Serve**: `jt serve` exposes `POST /v1/systemone`.
 
 ## Released models
@@ -281,7 +281,7 @@ Defaults: `finetune: lora`, `lora.r: 16`, learning rate 1e-4 for LoRA and 1e-5 f
 
 ## Datasets
 
-`jt data list` lists all **333** datasets in three groups. Each name is a registered converter: put it in `dataset:` and the library builds the records. A name marked `(eval)` is `eval_only` and stays out of a training mix. A training example whose state matches an evaluation record is dropped, and `--dry-run` reports how many.
+`jt data list` lists all **336** datasets in three groups. Each name is a registered converter: put it in `dataset:` and the library builds the records. A name marked `(eval)` is `eval_only` and stays out of a training mix. A training example whose state matches an evaluation record is dropped, and `--dry-run` reports how many.
 
 Image questions (one picture, no audio and no video) are listed under Text, with the text sets. GUI actions, tool choice, and agent trajectories are under Agent. Audio, video, and audio-video are the third group.
 
@@ -512,7 +512,7 @@ Image questions (one picture, no audio and no video) are listed under Text, with
 
 </details>
 
-<details><summary>Agent (23)</summary>
+<details><summary>Agent (26)</summary>
 
 - [aguvis_aitw](https://huggingface.co/datasets/xlangai/aguvis-stage2)
 - [aguvis_amex](https://huggingface.co/datasets/xlangai/aguvis-stage2)
@@ -523,6 +523,7 @@ Image questions (one picture, no audio and no video) are listed under Text, with
 - [aguvis_miniwob](https://huggingface.co/datasets/xlangai/aguvis-stage2)
 - [bfcl](https://huggingface.co/datasets/gorilla-llm/Berkeley-Function-Calling-Leaderboard) (eval)
 - [cagui](https://huggingface.co/datasets/openbmb/CAGUI) (eval)
+- [context_compact](https://huggingface.co/datasets/ayanami-kitasan/swe-pruner-pro-training-corpus)
 - [glaive_toolcall_zh](https://huggingface.co/datasets/llamafactory/glaive_toolcall_zh)
 - [glaive_tools](https://huggingface.co/datasets/glaiveai/glaive-function-calling-v2)
 - [guiact_smartphone](https://huggingface.co/datasets/yiye2023/GUIAct)
@@ -532,7 +533,9 @@ Image questions (one picture, no audio and no video) are listed under Text, with
 - [mind2web](https://huggingface.co/datasets/osunlp/Mind2Web)
 - [mm_mind2web](https://huggingface.co/datasets/osunlp/Multimodal-Mind2Web)
 - [omniact](https://huggingface.co/datasets/Writer/omniact)
+- [router_tier](https://huggingface.co/datasets/CARROT-LLM-Routing/SPROUT)
 - [s1_mini](https://huggingface.co/datasets/DavidHatley/system-one-mini-data)
+- [shell_gate](https://huggingface.co/datasets/tomngdev/shell-safety-v1.1)
 - [swe_agent](https://huggingface.co/datasets/nebius/SWE-agent-trajectories)
 - [toolace](https://huggingface.co/datasets/Team-ACE/ToolACE)
 - [weblinx](https://huggingface.co/datasets/McGill-NLP/WebLINX)
