@@ -508,8 +508,9 @@ _AGUVIS = {  # name: (json, images, license, max rows)
     "guide": ("guide.json", "zip:guide.zip", "apache-2.0", None),
     "android_control": ("android_control.json", "zip:android_control.zip", "apache-2.0", None),
     "amex": ("amex-l2.json", "zip:amex.zip", "cc-by-4.0", None),
-    "gui_odyssey": ("gui-odyssey-l2.json", "odyssey", "cc-by-4.0", 20000),
+    "gui_odyssey": ("gui-odyssey-l2.json", "odyssey", "cc-by-4.0", None),
 }
 for _n, (_j, _img, _lic, _max) in _AGUVIS.items():
     register(DatasetSpec(f"aguvis_{_n}", _aguvis(_j, _img, f"aguvis_{_n}", _max), ("train",), f"xlangai/aguvis-stage2:{_j}", _lic, "agents",
-                         multimodal=True, description="next-step choice + action type on GUI trajectories"))
+                         multimodal=True, version="2" if _n == "gui_odyssey" else "1",
+                         description="next-step choice + action type on GUI trajectories"))

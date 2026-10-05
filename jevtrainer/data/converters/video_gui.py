@@ -24,8 +24,8 @@ from jevtrainer.data.base import DatasetSpec, choice_record, mcq_record, registe
 
 _GW = "ONE-Lab/GUI-World"
 _CATS = ["android", "IOS", "XR", "multi", "software", "website"]
-_MAX_BYTES = int(float(os.environ.get("JEVTRAINER_GW_MAX_MB", "8")) * 1e6)
-_N = {"train": int(os.environ.get("JEVTRAINER_GW_TRAIN", "2000")), "test": int(os.environ.get("JEVTRAINER_GW_TEST", "500"))}
+_MAX_BYTES = int(float(os.environ.get("JEVTRAINER_GW_MAX_MB", "32")) * 1e6)
+_N_ENV = {"train": "JEVTRAINER_GW_TRAIN", "test": "JEVTRAINER_GW_TEST"}
 _PART = {"train": "train", "test": "benchmark"}
 _VID = dict(frames=8, max_side=640, keep_audio=False)
 _DEADLINE: dict[str, float] = {}  # one download budget per split and process (the three datasets share the clips)
@@ -63,7 +63,8 @@ def _select(split: str, cap: int):
                 if sizes.get(r.get("video_path"), 1e12) <= _MAX_BYTES:
                     r["cat"] = cat
                     rows.append(r)
-    rows = balanced_take(rows, lambda r: r["cat"], min(cap, _N[split]), random.Random(f"gui_world:{split}"))
+    limit = min(cap, int(os.environ[e])) if (e := _N_ENV[split]) in os.environ else cap
+    rows = balanced_take(rows, lambda r: r["cat"], limit, random.Random(f"gui_world:{split}"))
     keys = {r["video_path"]: r["video_path"].replace("/", "_").rsplit(".", 1)[0] for r in rows}
     files = {keys[r["video_path"]]: r["video_path"] for r in rows}
     items = bizkit.convert_hub_timed(_GW, "gui_world", files, _DEADLINE.setdefault(split, bizkit.deadline()), **_VID)
@@ -130,9 +131,9 @@ def gui_world_env(split, cap, rng):
 
 
 _SRC = "ONE-Lab/GUI-World"
-register(DatasetSpec("gui_world", gui_world, ("train", "test"), _SRC, "other (research)", "video", multimodal=True,
+register(DatasetSpec("gui_world", gui_world, ("train", "test"), _SRC, "other (research)", "video", multimodal=True, version="2",
                      description="GUI-World: multiple-choice questions about screen recordings of software, web, mobile, XR; test = official benchmark"))
-register(DatasetSpec("gui_world_goal", gui_world_goal, ("train", "test"), _SRC, "other (research)", "video", multimodal=True,
+register(DatasetSpec("gui_world_goal", gui_world_goal, ("train", "test"), _SRC, "other (research)", "video", multimodal=True, version="2",
                      description="GUI-World: which task goal is being carried out (distractors: goals of other recordings in the same environment)"))
-register(DatasetSpec("gui_world_env", gui_world_env, ("train", "test"), _SRC, "other (research)", "video", multimodal=True,
+register(DatasetSpec("gui_world_env", gui_world_env, ("train", "test"), _SRC, "other (research)", "video", multimodal=True, version="2",
                      description="GUI-World: kind of GUI environment (Android, iOS, XR, desktop, web, multi-app)"))
