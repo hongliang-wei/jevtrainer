@@ -313,10 +313,17 @@ def _aguvis(json_name: str, images: str, name: str, max_rows: int | None = None)
         steps = [p["step"] for _, p in parsed]
         types = Counter(p["type"] for _, p in parsed)
         vocab = {t: AGUVIS_ACTIONS[t] for t, c in types.items() if c >= 20}
-        opener = _image_opener(images)
         rng.shuffle(parsed)
         parsed = [x for x in parsed if x[1]["type"] in vocab]
+        done = _odyssey_partial(name, split) if images == "odyssey" else []
+        if done:
+            have = {rec.id for rec in done}
+            parsed = [x for x in parsed if rid(name, x[0]) not in have]
+        opener = _image_opener(images)
         n = 0
+        for rec in done:
+            n += 1
+            yield rec
         # Odyssey is one GET per screenshot. A wider pool overlaps those with writing the record;
         # the opener itself backs off when the mirror returns 429.
         pool = {"workers": int(os.environ.get("JEVTRAINER_ODY_WORKERS", "48")), "chunk": 512} if images == "odyssey" else {}
@@ -344,6 +351,27 @@ def _aguvis(json_name: str, images: str, name: str, max_rows: int | None = None)
             yield rec
 
     return build
+
+
+def _odyssey_partial(name: str, split: str) -> list[Record]:
+    """Records already written by a crashed full run. A dropped connection must not redo those screenshots."""
+    folder = cache_dir() / "records" / name
+    if not folder.is_dir():
+        return []
+    files = [p for p in folder.glob(f"{split}-cap*-v2*") if p.suffix in {".tmp", ".jsonl"} and p.stat().st_size > 1_000_000]
+    if not files:
+        return []
+    src = max(files, key=lambda p: p.stat().st_size)
+    out = []
+    for line in src.open(encoding="utf-8"):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(Record.from_dict(json.loads(line)))
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            continue
+    return out
 
 
 class _Gate:
@@ -478,10 +506,15 @@ def _odyssey_opener(image_cls):
                 continue
             try:
                 if response.status_code == 200:
-                    with part.open("wb") as fh:
-                        for chunk in response.iter_content(1 << 16):
-                            if chunk:
-                                fh.write(chunk)
+                    try:
+                        with part.open("wb") as fh:
+                            for chunk in response.iter_content(1 << 16):
+                                if chunk:
+                                    fh.write(chunk)
+                    except requests.RequestException:
+                        part.unlink(missing_ok=True)
+                        gate.slow(min(2 * (attempt + 1), 8))
+                        continue
                     if part.stat().st_size < 32:
                         part.unlink(missing_ok=True)
                         return None
