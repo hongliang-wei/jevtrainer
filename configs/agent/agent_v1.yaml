@@ -1,0 +1,127 @@
+# Qwen3.5-2B + LoRA, marker readout, on the agent mix.
+# General sources are the v4 mix (configs/repro/qwen35_2b_lora_v4.yaml) without the five
+# agent sets that are listed again below. Each cap is half the records that mix actually
+# loaded; weights stay (typed_decisions 3, quality and qasper 2).
+# GUI screenshots are 150,000 in total, split in proportion to each dataset's train cache.
+# Tools, review, and the control-plane sets are taken in full.
+# Same optimisation as the 2B v4 run: 1 epoch, batch 8 x accum 8, holdout 2%.
+model: Qwen/Qwen3.5-2B
+readout: marker
+readout_options:
+  full_vocab_loss: true
+  image_pixel_budget: 2621440
+finetune: lora
+lora:
+  r: 64
+  alpha: 128
+output_dir: runs/agent/agent_v1
+
+dataset:
+  # general, half of the v4 sample
+  - {name: typed_decisions, weight: 3, max_samples: 600}
+  - {name: agnews, max_samples: 10000}
+  - {name: banking77, max_samples: 4996}
+  - {name: clinc150, max_samples: 4000}
+  - {name: boolq, max_samples: 4713}
+  - {name: mnli, max_samples: 5000}
+  - {name: anli, max_samples: 5000}
+  - {name: arc, max_samples: 1685}
+  - {name: openbookqa, max_samples: 2477}
+  - {name: csqa, max_samples: 4809}
+  - {name: mmlu_aux, max_samples: 5000}
+  - {name: hellaswag, max_samples: 4000}
+  - {name: winogrande, max_samples: 4000}
+  - {name: sst5, max_samples: 4272}
+  - {name: yelp, max_samples: 3000}
+  - {name: gsm8k_mc, max_samples: 3736}
+  - {name: sms_spam, max_samples: 2787}
+  - {name: kev_suites, max_samples: 18644}
+  - {name: jebadiah_synth, max_samples: 1626}
+  - {name: mojev_mix, max_samples: 50000}
+  - {name: nanojev, max_samples: 5449}
+  - {name: onejev, max_samples: 47353}
+  - {name: scienceqa_img, max_samples: 781}
+  - {name: cauldron_iconqa, max_samples: 2062}
+  - {name: cauldron_aokvqa, max_samples: 1040}
+  - {name: cauldron_scienceqa, max_samples: 625}
+  - {name: cauldron_ai2d, max_samples: 304}
+  - {name: cauldron_tqa, max_samples: 186}
+  - {name: sharc, max_samples: 3000}
+  - {name: legalbench_rules, max_samples: 1221}
+  - {name: legalbench_consumer_contracts, max_samples: 158}   # cc-by-nc
+  - {name: legalbench_cuad, max_samples: 1500}
+  - {name: maud, max_samples: 2000}
+  - {name: ecthr, max_samples: 3520}
+  - {name: ledgar, max_samples: 1500}
+  - {name: quality, weight: 2, max_samples: 39}
+  - {name: musique, max_samples: 5000}
+  - {name: hotpotqa, max_samples: 3000}
+  - {name: wiki2mh, max_samples: 2000}
+  - {name: wikihop, max_samples: 2500}
+  - {name: timeqa, max_samples: 3000}
+  - {name: qasper, weight: 2, max_samples: 159}
+  - {name: reclor, max_samples: 2319}               # research only
+  - {name: tatqa, max_samples: 1096}
+  - {name: finqa, max_samples: 2982}
+  - {name: drop, max_samples: 2500}
+  - {name: tabfact, max_samples: 2500}
+  - {name: docnli, max_samples: 3000}
+  - {name: wice, max_samples: 1548}
+  - {name: halueval_summ, max_samples: 2000}
+  - {name: ppe_ifeval, max_samples: 788}
+  - {name: reward_bench, max_samples: 1175}
+  - {name: reward_bench2, max_samples: 652}
+  - {name: mt_bench_human, max_samples: 966}
+  - {name: swe_agent, max_samples: 3000}
+  - {name: phishing, max_samples: 2000}
+  - {name: patents, max_samples: 1500}
+  - {name: hyperpartisan, max_samples: 247}
+  # GUI screenshots, 150,000 proportional to the train caches
+  - {name: mm_mind2web, max_samples: 2234}
+  - {name: guiact_web_single, max_samples: 20178}
+  - {name: guiact_web_multi, max_samples: 13252}
+  - {name: guiact_smartphone, max_samples: 19997}
+  - {name: omniact, max_samples: 1984}
+  - {name: weblinx, max_samples: 3311}              # cc-by-nc-sa
+  - {name: mind2web, max_samples: 2243}
+  - {name: aguvis_aitw, max_samples: 5787}
+  - {name: aguvis_coat, max_samples: 3631}
+  - {name: aguvis_miniwob, max_samples: 2994}
+  - {name: aguvis_guide, max_samples: 3905}
+  - {name: aguvis_android_control, max_samples: 22725}
+  - {name: aguvis_amex, max_samples: 11718}
+  - {name: aguvis_gui_odyssey, max_samples: 36041}
+  # tools, review, control plane: full train caches
+  - {name: toolace}
+  - {name: glaive_tools}
+  - {name: glaive_toolcall_zh}
+  - {name: hermes_tools}
+  - {name: wildjailbreak}
+  - {name: aegis2}
+  - {name: helpsteer2}
+  - {name: jailbreak_classification}
+  - {name: toxic_chat}                              # cc-by-nc
+  - {name: router_tier}
+  - {name: shell_gate}
+  - {name: context_compact}
+
+augment:
+  p_none: 0.05
+  p_distract: 0.1
+  p_pack: 0.15
+  pack_max: 4
+
+epochs: 1
+lr: 1.0e-4
+weight_decay: 0.01
+warmup_ratio: 0.03
+batch_size: 8
+grad_accum: 8
+max_state_tokens: 4096
+max_length: 6144
+num_workers: 8
+holdout: 0.02
+eval_dataset: intern-accuracy-v1
+save_steps: 1000
+resume: true
+report_to: wandb
