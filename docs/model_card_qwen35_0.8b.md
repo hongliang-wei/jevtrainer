@@ -9,6 +9,8 @@ tags:
 
 # jevtrainer-qwen35-0.8b-2026-10-02
 
+<p align="center"><a href="https://github.com/hongliang-wei/jevtrainer"><img alt="GitHub: hongliang-wei/jevtrainer" src="https://img.shields.io/badge/GitHub-hongliang--wei%2Fjevtrainer-181717?logo=github&logoColor=white"></a></p>
+
 A Jev-style decision model. One forward pass returns a probability for every option. It does not generate text. The readout is `marker`. The base `Qwen/Qwen3.5-0.8B` is fully fine-tuned, with the vision tower frozen. Training finished on **2026-10-02**.
 
 The training config is [`configs/repro/intern_0.8b_v4.yaml`](https://github.com/hongliang-wei/jevtrainer/blob/main/configs/repro/intern_0.8b_v4.yaml) in [jevtrainer](https://github.com/hongliang-wei/jevtrainer): public text, Jev-format data, and images, about 540k training records, one epoch.
