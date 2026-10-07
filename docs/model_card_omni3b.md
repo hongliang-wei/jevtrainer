@@ -9,6 +9,8 @@ tags:
 
 # jevtrainer-omni3b-2026-10-04
 
+<p align="center"><a href="https://github.com/hongliang-wei/jevtrainer"><img alt="GitHub: hongliang-wei/jevtrainer" src="https://img.shields.io/badge/GitHub-hongliang--wei%2Fjevtrainer-181717?logo=github&logoColor=white"></a></p>
+
 A Jev-style decision model that reads text, images, video, and audio. The readout is `marker`. LoRA (r=32, alpha=64) is trained on the thinker of `Qwen/Qwen2.5-Omni-3B`. Only the thinker is loaded; the speech output is not. Training finished on **2026-10-04**.
 
 The training config is `configs/av/omni3b_v4.yaml` in [jevtrainer](https://github.com/hongliang-wei/jevtrainer): 79 text, image, audio, and video datasets, one epoch. The holdout has 1,610 examples, accuracy **85.03%**, skill 79.54%, ECE 0.0096.
