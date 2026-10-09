@@ -8,6 +8,7 @@
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img alt="License" src="https://img.shields.io/badge/license-Apache%202.0-blue"></a>
   <a href="https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02"><img alt="JevTrainer 0.8B" src="https://img.shields.io/badge/%F0%9F%A4%97-JevTrainer%200.8B-yellow"></a>
   <a href="https://huggingface.co/weihongliang/jevtrainer-qwen35-2b-2026-10-05"><img alt="JevTrainer 2B" src="https://img.shields.io/badge/%F0%9F%A4%97-JevTrainer%202B-yellow"></a>
+  <a href="https://huggingface.co/weihongliang/jevtrainer-qwen35-2b-agent-2026-10-08"><img alt="JevTrainer 2B Agent" src="https://img.shields.io/badge/%F0%9F%A4%97-JevTrainer%202B%20Agent-yellow"></a>
   <a href="https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04"><img alt="JevTrainer Omni 3B" src="https://img.shields.io/badge/%F0%9F%A4%97-JevTrainer%20Omni%203B-yellow"></a>
 </p>
 
@@ -63,6 +64,7 @@ Download a repo and pass the directory as `checkpoint`. A LoRA model still downl
 | --- | --- | --- | --- |
 | [weihongliang/jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02) | 2026-10-02 | Qwen3.5-0.8B, full, `marker` | [`configs/repro/intern_0.8b_v4.yaml`](configs/repro/intern_0.8b_v4.yaml) |
 | [weihongliang/jevtrainer-qwen35-2b-2026-10-05](https://huggingface.co/weihongliang/jevtrainer-qwen35-2b-2026-10-05) | 2026-10-05 | Qwen3.5-2B, LoRA r=64, `marker` | [`configs/repro/qwen35_2b_lora_v4.yaml`](configs/repro/qwen35_2b_lora_v4.yaml) |
+| [weihongliang/jevtrainer-qwen35-2b-agent-2026-10-08](https://huggingface.co/weihongliang/jevtrainer-qwen35-2b-agent-2026-10-08) | 2026-10-08 | Qwen3.5-2B, LoRA r=64 merged, `marker` | [`configs/agent/agent_v1.yaml`](configs/agent/agent_v1.yaml) |
 | [weihongliang/jevtrainer-omni3b-2026-10-04](https://huggingface.co/weihongliang/jevtrainer-omni3b-2026-10-04) | 2026-10-04 | Qwen2.5-Omni-3B thinker, LoRA r=32, `marker` | [`configs/av/omni3b_v4.yaml`](configs/av/omni3b_v4.yaml) |
 
 **Evaluation of [weihongliang/jevtrainer-qwen35-0.8b-2026-10-02](https://huggingface.co/weihongliang/jevtrainer-qwen35-0.8b-2026-10-02).** Accuracy in percent.
@@ -230,6 +232,19 @@ Download a repo and pass the directory as `checkpoint`. A LoRA model still downl
 <td align="right">82.93</td>
 <td align="right">69.08</td>
 </tr>
+<tr>
+<td><a href="https://huggingface.co/weihongliang/jevtrainer-qwen35-2b-agent-2026-10-08">jevtrainer-2b-agent</a></td>
+<td align="right">100.00</td>
+<td align="right">91.67</td>
+<td align="right">52.25</td>
+<td align="right">72.20</td>
+<td align="right">94.52</td>
+<td align="right">91.75</td>
+<td align="right">94.75</td>
+<td align="right"><b>85.31</b></td>
+<td align="right">80.50</td>
+<td align="right">89.12</td>
+</tr>
 </tbody>
 </table>
 
@@ -248,6 +263,9 @@ jt eval configs/eval/intern_accuracy_v1.yaml --set checkpoint=runs/jev-qwen35-0.
 
 huggingface-cli download weihongliang/jevtrainer-qwen35-2b-2026-10-05 --local-dir runs/jev-qwen35-2b
 jt eval configs/eval/intern_accuracy_v1.yaml --set checkpoint=runs/jev-qwen35-2b
+
+huggingface-cli download weihongliang/jevtrainer-qwen35-2b-agent-2026-10-08 --local-dir runs/jev-qwen35-2b-agent
+jt eval configs/eval/intern_accuracy_v1.yaml --set checkpoint=runs/jev-qwen35-2b-agent
 
 huggingface-cli download weihongliang/jevtrainer-omni3b-2026-10-04 --local-dir runs/jev-omni3b
 jt eval configs/eval/av_omni.yaml --set checkpoint=runs/jev-omni3b --set benchmarks=worldsense,omnibench
