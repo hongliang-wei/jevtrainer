@@ -780,6 +780,10 @@ jt eval configs/eval/intern_accuracy_v1.yaml --set checkpoint=runs/my-run
 jt serve runs/my-run    # POST /v1/systemone
 ```
 
+### Decision Index
+
+`scripts/decision_index.sh runs/my-run my-run` serves the checkpoint and runs the public [Decision Index](https://github.com/apolinario/decision-index) suite through it. Setup and rules: [docs/decision_index.md](docs/decision_index.md).
+
 ## Layout
 
 ```text
